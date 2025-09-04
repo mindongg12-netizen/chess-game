@@ -811,11 +811,13 @@ class ChessGame {
     
     connectWebSocket() {
         try {
+            console.log('WebSocket 연결 시도:', this.wsUrl);
             this.ws = new WebSocket(this.wsUrl);
             
             this.ws.onopen = () => {
-                console.log('WebSocket 연결됨');
+                console.log('✅ WebSocket 연결 성공!');
                 this.isConnected = true;
+                this.updateConnectionStatus('연결됨');
                 this.sendMessage({
                     type: 'player_connect',
                     playerId: this.playerId
@@ -823,38 +825,88 @@ class ChessGame {
             };
             
             this.ws.onmessage = (event) => {
+                console.log('📨 메시지 수신:', event.data);
                 const message = JSON.parse(event.data);
                 this.handleWebSocketMessage(message);
             };
             
-            this.ws.onclose = () => {
-                console.log('WebSocket 연결 종료');
+            this.ws.onclose = (event) => {
+                console.log('❌ WebSocket 연결 종료:', event.code, event.reason);
                 this.isConnected = false;
-                // 재연결 시도
-                setTimeout(() => {
-                    if (!this.isConnected) {
-                        this.connectWebSocket();
-                    }
-                }, 3000);
+                this.updateConnectionStatus('연결 끊김');
+                // 재연결 시도 제거 (Vercel에서는 효과 없음)
             };
             
             this.ws.onerror = (error) => {
-                console.error('WebSocket 오류:', error);
+                console.error('🚨 WebSocket 오류:', error);
                 this.isConnected = false;
+                this.updateConnectionStatus('연결 실패');
             };
             
         } catch (error) {
-            console.error('WebSocket 연결 실패:', error);
+            console.error('🚨 WebSocket 연결 실패:', error);
+            this.isConnected = false;
+            this.updateConnectionStatus('WebSocket 지원 안됨');
             // 로컬 테스트를 위한 시뮬레이션 모드로 전환
             this.simulationMode = true;
         }
     }
     
+    updateConnectionStatus(status) {
+        // 연결 상태를 화면에 표시
+        console.log('🔌 연결 상태:', status);
+        const statusElement = document.getElementById('gameStatus');
+        if (statusElement && !this.isGameInProgress) {
+            statusElement.style.color = this.isConnected ? '#28a745' : '#dc3545';
+            statusElement.textContent = `연결 상태: ${status}`;
+        }
+    }
+    
     sendMessage(message) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            console.log('📤 메시지 전송:', message.type);
             this.ws.send(JSON.stringify(message));
         } else {
-            console.log('WebSocket 연결되지 않음, 시뮬레이션 모드');
+            console.log('⚠️ WebSocket 연결되지 않음, 로컬 시뮬레이션 모드로 전환');
+            this.handleLocalSimulation(message);
+        }
+    }
+    
+    handleLocalSimulation(message) {
+        // WebSocket 연결이 안 될 때 로컬 시뮬레이션
+        console.log('🎭 로컬 시뮬레이션:', message.type);
+        
+        switch (message.type) {
+            case 'create_room':
+                setTimeout(() => {
+                    if (!this.gameCode) {
+                        this.generateGameCode();
+                    }
+                    this.handleRoomCreated({
+                        roomCode: this.gameCode,
+                        hostName: message.hostName
+                    });
+                }, 500);
+                break;
+                
+            case 'join_room':
+                setTimeout(() => {
+                    // 방 참가 시뮬레이션
+                    this.handleRoomJoined({
+                        roomCode: message.roomCode,
+                        hostName: '시뮬 방장',
+                        guestName: message.guestName
+                    });
+                }, 500);
+                break;
+                
+            case 'start_game':
+                setTimeout(() => {
+                    this.handleGameStart({
+                        roomCode: message.roomCode
+                    });
+                }, 500);
+                break;
         }
     }
     
