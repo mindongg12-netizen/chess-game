@@ -11,13 +11,13 @@ const server = http.createServer((req, res) => {
 
     switch (extname) {
         case '.js':
-            contentType = 'text/javascript';
+            contentType = 'text/javascript; charset=utf-8';
             break;
         case '.css':
-            contentType = 'text/css';
+            contentType = 'text/css; charset=utf-8';
             break;
         case '.html':
-            contentType = 'text/html';
+            contentType = 'text/html; charset=utf-8';
             break;
     }
 
