@@ -383,7 +383,7 @@ class ChessGame {
         this.board[fromRow][fromCol] = null;
         
         // 온라인 모드에서 상대방에게 이동 전송
-        if (this.isConnected && this.isOnlineGame) {
+        if (this.isConnected && this.isOnlineGame && this.isGameInProgress) {
             const moveData = {
                 type: 'game_move',
                 fromRow: fromRow,
@@ -392,12 +392,20 @@ class ChessGame {
                 toCol: toCol,
                 capturedPiece: capturedPiece,
                 nextPlayer: this.currentPlayer === 'white' ? 'black' : 'white',
-                roomCode: this.gameCode
+                roomCode: this.gameCode,
+                playerId: this.playerId
             };
             console.log('📤 내 이동 전송:', `(${fromRow},${fromCol}) → (${toRow},${toCol})`);
+            console.log('📤 이동 데이터:', moveData);
+            console.log('🔗 연결 상태:', this.isConnected);
+            console.log('🌐 온라인 게임:', this.isOnlineGame);
+            console.log('🎮 게임 진행중:', this.isGameInProgress);
             this.sendMessage(moveData);
         } else {
-            console.log('⚠️ 오프라인 모드 - 이동 전송 안함');
+            console.log('⚠️ 이동 전송 조건 불충족');
+            console.log('- 연결 상태:', this.isConnected);
+            console.log('- 온라인 게임:', this.isOnlineGame);
+            console.log('- 게임 진행중:', this.isGameInProgress);
         }
         
         this.renderBoard();
@@ -924,10 +932,10 @@ class ChessGame {
     }
     
     startMessagePolling() {
-        console.log('🔄 메시지 폴링 시작');
+        console.log('🔄 메시지 폴링 시작 (500ms 간격)');
         this.pollingInterval = setInterval(() => {
             this.checkMessages();
-        }, 1000); // 1초마다 메시지 확인
+        }, 500); // 0.5초마다 메시지 확인 (더 빠른 반응)
     }
     
     async checkMessages() {
@@ -937,7 +945,9 @@ class ChessGame {
             
             if (result.messages && result.messages.length > 0) {
                 console.log('📬 새 메시지 수신:', result.messages.length, '개');
+                console.log('📬 메시지 내용:', result.messages);
                 for (const message of result.messages) {
+                    console.log('🔄 메시지 처리:', message.type);
                     this.handleWebSocketMessage(message);
                 }
             }
@@ -1074,11 +1084,17 @@ class ChessGame {
     }
     
     handleGameStart(message) {
+        console.log('🎮 게임 시작 처리:', message);
+        this.gameStarted = true;
         this.isGameInProgress = true;
         this.currentPlayer = 'white';
         this.showGameButtons();
         this.updateGameStatus();
         this.startTurnTimer();
+        console.log('✅ 게임 상태 업데이트 완료');
+        console.log('- 게임 시작됨:', this.gameStarted);
+        console.log('- 게임 진행중:', this.isGameInProgress);
+        console.log('- 현재 플레이어:', this.currentPlayer);
     }
     
     handleTimerSync(message) {

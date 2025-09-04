@@ -227,9 +227,18 @@ function startGame(data) {
 }
 
 function handleMove(data) {
+    console.log('♟️ 이동 요청 수신:', data);
     const room = gameRooms.get(data.roomCode);
     
-    if (!room || !room.gameStarted) {
+    console.log('🏠 방 정보:', room);
+    
+    if (!room) {
+        console.log('❌ 방을 찾을 수 없음');
+        return { error: '존재하지 않는 방입니다' };
+    }
+    
+    if (!room.gameStarted) {
+        console.log('❌ 게임이 시작되지 않음');
         return { error: '게임이 진행중이 아닙니다' };
     }
     
@@ -237,7 +246,13 @@ function handleMove(data) {
     
     // 상대방에게 이동 정보 전송
     const opponentId = room.hostId === data.playerId ? room.guestId : room.hostId;
-    addMessageToPlayer(opponentId, {
+    console.log('👥 플레이어 정보:');
+    console.log('- 이동한 플레이어:', data.playerId);
+    console.log('- 방장 ID:', room.hostId);
+    console.log('- 참가자 ID:', room.guestId);
+    console.log('- 상대방 ID:', opponentId);
+    
+    const moveMessage = {
         type: 'game_move',
         fromRow: data.fromRow,
         fromCol: data.fromCol,
@@ -245,9 +260,12 @@ function handleMove(data) {
         toCol: data.toCol,
         capturedPiece: data.capturedPiece,
         nextPlayer: data.nextPlayer
-    });
+    };
     
-    console.log('♟️ 이동 전송:', data.roomCode, `(${data.fromRow},${data.fromCol}) → (${data.toRow},${data.toCol})`);
+    addMessageToPlayer(opponentId, moveMessage);
+    
+    console.log('✅ 이동 메시지 전송 완료:', `(${data.fromRow},${data.fromCol}) → (${data.toRow},${data.toCol})`);
+    console.log('📨 전송된 메시지:', moveMessage);
     
     return { success: true };
 }
