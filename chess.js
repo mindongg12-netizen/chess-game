@@ -23,14 +23,12 @@ class ChessGame {
         this.hostPlayerName = '';
         this.guestPlayerName = '';
         
-        // WebSocket 통신
+        // HTTP API 통신 (WebSocket 대신)
         this.ws = null;
-        // 환경에 따라 WebSocket URL 자동 설정
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        this.wsUrl = `${protocol}//${host}`;
+        this.apiUrl = window.location.origin;
         this.playerId = this.generatePlayerId();
-        this.isConnected = false;
+        this.isConnected = true; // HTTP는 항상 연결됨
+        this.pollingInterval = null;
         
         // 체스 기물 유니코드
         this.pieces = {
@@ -54,10 +52,11 @@ class ChessGame {
         
         console.log('🎯 체스게임 초기화 시작');
         console.log('🆔 플레이어 ID:', this.playerId);
-        console.log('🌐 WebSocket URL:', this.wsUrl);
+        console.log('🌐 API URL:', this.apiUrl);
+        console.log('🔌 HTTP 연결 상태: 항상 연결됨');
         
         this.initializeEventListeners();
-        this.connectWebSocket();
+        this.startMessagePolling();
     }
     
     initializeEventListeners() {
@@ -124,20 +123,13 @@ class ChessGame {
         this.isOnlineGame = true;
         this.isRoomHost = true;
         
-        if (this.isConnected) {
-            console.log('📤 서버에 방 생성 요청 전송');
-            // 서버에 방 생성 요청
-            this.sendMessage({
-                type: 'create_room',
-                hostName: hostName,
-                playerId: this.playerId
-            });
-        } else {
-            console.log('⚠️ WebSocket 연결 안됨, 로컬 모드로 진행');
-            // 로컬 모드 
-            this.generateGameCode();
-            this.showGameCode();
-        }
+        console.log('📤 서버에 방 생성 요청 전송');
+        // HTTP API로 방 생성 요청
+        this.sendMessage({
+            type: 'create_room',
+            hostName: hostName,
+            playerId: this.playerId
+        });
         
         this.initializeBoard();
         this.renderBoard();
@@ -670,30 +662,24 @@ class ChessGame {
         this.guestPlayerName = guestName;
         this.isRoomGuest = true;
         
-        if (this.isConnected) {
-            console.log('📤 서버에 방 참가 요청 전송');
-            // 서버에 방 참가 요청
-            this.sendMessage({
-                type: 'join_room',
-                roomCode: enteredCode,
-                guestName: guestName,
-                playerId: this.playerId
-            });
-            
-            // UI 전환
-            console.log('🎨 UI 전환: 메뉴 → 게임');
-            document.getElementById('gameMenu').style.display = 'none';
-            document.getElementById('gameContainer').style.display = 'block';
-            this.isOnlineGame = true;
-            this.initializeBoard();
-            this.renderBoard();
-            this.showWaitingState();
-            this.updatePlayerNames();
-        } else {
-            console.log('⚠️ WebSocket 연결 안됨, 시뮬레이션 모드로 진행');
-            // 오프라인 모드 (기존 시뮬레이션)
-            this.simulateJoinRoom(enteredCode);
-        }
+        console.log('📤 서버에 방 참가 요청 전송');
+        // HTTP API로 방 참가 요청
+        this.sendMessage({
+            type: 'join_room',
+            roomCode: enteredCode,
+            guestName: guestName,
+            playerId: this.playerId
+        });
+        
+        // UI 전환
+        console.log('🎨 UI 전환: 메뉴 → 게임');
+        document.getElementById('gameMenu').style.display = 'none';
+        document.getElementById('gameContainer').style.display = 'block';
+        this.isOnlineGame = true;
+        this.initializeBoard();
+        this.renderBoard();
+        this.showWaitingState();
+        this.updatePlayerNames();
     }
     
     simulateJoinRoom(code) {
@@ -882,13 +868,67 @@ class ChessGame {
         }
     }
     
-    sendMessage(message) {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            console.log('📤 메시지 전송:', message.type);
-            this.ws.send(JSON.stringify(message));
-        } else {
-            console.log('⚠️ WebSocket 연결되지 않음, 로컬 시뮬레이션 모드로 전환');
+    async sendMessage(message) {
+        console.log('📤 HTTP API 요청:', message.type);
+        try {
+            const response = await fetch(`${this.apiUrl}/api/action`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(message)
+            });
+            
+            const result = await response.json();
+            console.log('📥 API 응답:', result);
+            
+            if (result.success) {
+                this.handleApiResponse(result);
+            } else if (result.error) {
+                console.error('❌ API 오류:', result.error);
+                alert('오류: ' + result.error);
+            }
+        } catch (error) {
+            console.error('🚨 HTTP 요청 실패:', error);
             this.handleLocalSimulation(message);
+        }
+    }
+    
+    handleApiResponse(response) {
+        // API 응답을 WebSocket 메시지 형식으로 변환하여 기존 핸들러 사용
+        switch (response.type) {
+            case 'room_created':
+                this.handleRoomCreated(response);
+                break;
+            case 'room_joined':
+                this.handleRoomJoined(response);
+                break;
+            case 'game_start':
+                this.handleGameStart(response);
+                break;
+        }
+    }
+    
+    startMessagePolling() {
+        console.log('🔄 메시지 폴링 시작');
+        this.pollingInterval = setInterval(() => {
+            this.checkMessages();
+        }, 1000); // 1초마다 메시지 확인
+    }
+    
+    async checkMessages() {
+        try {
+            const response = await fetch(`${this.apiUrl}/api/messages/${this.playerId}`);
+            const result = await response.json();
+            
+            if (result.messages && result.messages.length > 0) {
+                console.log('📬 새 메시지 수신:', result.messages.length, '개');
+                for (const message of result.messages) {
+                    this.handleWebSocketMessage(message);
+                }
+            }
+        } catch (error) {
+            console.error('메시지 폴링 오류:', error);
         }
     }
     
