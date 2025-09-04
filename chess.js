@@ -52,6 +52,10 @@ class ChessGame {
             }
         };
         
+        console.log('🎯 체스게임 초기화 시작');
+        console.log('🆔 플레이어 ID:', this.playerId);
+        console.log('🌐 WebSocket URL:', this.wsUrl);
+        
         this.initializeEventListeners();
         this.connectWebSocket();
     }
@@ -109,14 +113,19 @@ class ChessGame {
             return;
         }
         
+        console.log('🎮 방 생성 시작 - 방장:', hostName);
+        console.log('🔌 WebSocket 연결 상태:', this.isConnected);
+        
         // 온라인 방 생성
         this.hostPlayerName = hostName;
         document.getElementById('gameMenu').style.display = 'none';
         document.getElementById('gameContainer').style.display = 'block';
         this.isRoomCreated = true;
         this.isOnlineGame = true;
+        this.isRoomHost = true;
         
         if (this.isConnected) {
+            console.log('📤 서버에 방 생성 요청 전송');
             // 서버에 방 생성 요청
             this.sendMessage({
                 type: 'create_room',
@@ -124,8 +133,8 @@ class ChessGame {
                 playerId: this.playerId
             });
         } else {
-            // 오프라인 모드 (기존 시뮬레이션)
-            this.isRoomHost = true;
+            console.log('⚠️ WebSocket 연결 안됨, 로컬 모드로 진행');
+            // 로컬 모드 
             this.generateGameCode();
             this.showGameCode();
         }
@@ -383,7 +392,7 @@ class ChessGame {
         
         // 온라인 모드에서 상대방에게 이동 전송
         if (this.isConnected && this.isOnlineGame) {
-            this.sendMessage({
+            const moveData = {
                 type: 'game_move',
                 fromRow: fromRow,
                 fromCol: fromCol,
@@ -392,7 +401,11 @@ class ChessGame {
                 capturedPiece: capturedPiece,
                 nextPlayer: this.currentPlayer === 'white' ? 'black' : 'white',
                 roomCode: this.gameCode
-            });
+            };
+            console.log('📤 내 이동 전송:', `(${fromRow},${fromCol}) → (${toRow},${toCol})`);
+            this.sendMessage(moveData);
+        } else {
+            console.log('⚠️ 오프라인 모드 - 이동 전송 안함');
         }
         
         this.renderBoard();
@@ -650,10 +663,15 @@ class ChessGame {
             return;
         }
         
+        console.log('🚪 방 참가 시도 - 참가자:', guestName, '방 코드:', enteredCode);
+        console.log('🔌 WebSocket 연결 상태:', this.isConnected);
+        
         // 온라인 방 참가
         this.guestPlayerName = guestName;
+        this.isRoomGuest = true;
         
         if (this.isConnected) {
+            console.log('📤 서버에 방 참가 요청 전송');
             // 서버에 방 참가 요청
             this.sendMessage({
                 type: 'join_room',
@@ -663,6 +681,7 @@ class ChessGame {
             });
             
             // UI 전환
+            console.log('🎨 UI 전환: 메뉴 → 게임');
             document.getElementById('gameMenu').style.display = 'none';
             document.getElementById('gameContainer').style.display = 'block';
             this.isOnlineGame = true;
@@ -671,6 +690,7 @@ class ChessGame {
             this.showWaitingState();
             this.updatePlayerNames();
         } else {
+            console.log('⚠️ WebSocket 연결 안됨, 시뮬레이션 모드로 진행');
             // 오프라인 모드 (기존 시뮬레이션)
             this.simulateJoinRoom(enteredCode);
         }
@@ -941,22 +961,27 @@ class ChessGame {
     
     // 서버 메시지 핸들러들
     handleRoomCreated(message) {
+        console.log('✅ 방 생성 완료:', message);
         this.gameCode = message.roomCode;
         this.isRoomHost = true;
         this.hostPlayerName = message.hostName;
         this.showGameCode();
         this.updatePlayerNames();
+        console.log('🏠 방장 설정 완료 - 코드:', this.gameCode);
     }
     
     handleRoomJoined(message) {
+        console.log('✅ 방 참가 완료:', message);
         this.gameCode = message.roomCode;
         this.isRoomGuest = true;
         this.hostPlayerName = message.hostName;
         this.guestPlayerName = message.guestName;
         this.updatePlayerNames();
+        console.log('🚪 참가자 설정 완료 - 방장:', this.hostPlayerName, '참가자:', this.guestPlayerName);
     }
     
     handlePlayerJoined(message) {
+        console.log('🎉 상대방 참가:', message);
         if (this.isRoomHost) {
             this.guestPlayerName = message.guestName;
             this.updatePlayerNames();
@@ -964,17 +989,22 @@ class ChessGame {
             const statusElement = document.getElementById('gameStatus');
             if (statusElement) {
                 statusElement.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
+                statusElement.style.color = '#28a745';
             }
+            console.log('🎮 게임 시작 가능 상태!');
         }
     }
     
     handleGameMove(message) {
+        console.log('♟️ 상대방 이동 수신:', `(${message.fromRow},${message.fromCol}) → (${message.toRow},${message.toCol})`);
+        
         // 상대방의 이동을 내 보드에 반영
         this.board[message.toRow][message.toCol] = this.board[message.fromRow][message.fromCol];
         this.board[message.fromRow][message.fromCol] = null;
         
         // 잡힌 기물 처리
         if (message.capturedPiece) {
+            console.log('⚔️ 기물 잡힘:', message.capturedPiece);
             this.capturedPieces[message.capturedPiece.color].push(message.capturedPiece);
         }
         
@@ -982,6 +1012,7 @@ class ChessGame {
         this.currentPlayer = message.nextPlayer;
         this.updateGameStatus();
         this.resetTurnTimer();
+        console.log('🔄 보드 업데이트 완료, 다음 플레이어:', this.currentPlayer);
     }
     
     handleGameStart(message) {
