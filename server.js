@@ -7,7 +7,7 @@ const fs = require('fs');
 const server = http.createServer((req, res) => {
     let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
     let extname = path.extname(filePath);
-    let contentType = 'text/html';
+    let contentType = 'text/html; charset=utf-8';
 
     switch (extname) {
         case '.js':
@@ -21,14 +21,14 @@ const server = http.createServer((req, res) => {
             break;
     }
 
-    fs.readFile(filePath, (err, content) => {
+    fs.readFile(filePath, 'utf8', (err, content) => {
         if (err) {
             if (err.code === 'ENOENT') {
-                res.writeHead(404);
-                res.end('파일을 찾을 수 없습니다');
+                res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end('파일을 찾을 수 없습니다', 'utf-8');
             } else {
-                res.writeHead(500);
-                res.end('서버 오류: ' + err.code);
+                res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end('서버 오류: ' + err.code, 'utf-8');
             }
         } else {
             res.writeHead(200, { 'Content-Type': contentType });
