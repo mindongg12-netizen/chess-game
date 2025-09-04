@@ -25,11 +25,9 @@ class ChessGame {
         
         // WebSocket 통신
         this.ws = null;
-        this.wsUrl = this.getWebSocketUrl();
+        this.wsUrl = 'ws://localhost:3000'; // 개발용 로컬 서버
         this.playerId = this.generatePlayerId();
         this.isConnected = false;
-        this.pollingMode = false;
-        this.pendingCreateRoom = null;
         
         // 체스 기물 유니코드
         this.pieces = {
@@ -115,19 +113,18 @@ class ChessGame {
         this.isRoomCreated = true;
         this.isOnlineGame = true;
         
-        const createRoomMessage = {
-            type: 'create_room',
-            hostName: hostName,
-            playerId: this.playerId
-        };
-        
         if (this.isConnected) {
             // 서버에 방 생성 요청
-            this.sendMessage(createRoomMessage);
+            this.sendMessage({
+                type: 'create_room',
+                hostName: hostName,
+                playerId: this.playerId
+            });
         } else {
-            // WebSocket 연결 대기 중이면 요청 저장
-            this.pendingCreateRoom = createRoomMessage;
-            console.log('연결 대기 중, 방 생성 요청 저장됨');
+            // 오프라인 모드 (기존 시뮬레이션)
+            this.isRoomHost = true;
+            this.generateGameCode();
+            this.showGameCode();
         }
         
         this.initializeBoard();
@@ -805,26 +802,11 @@ class ChessGame {
     }
     
     // WebSocket 통신 메서드들
-    getWebSocketUrl() {
-        // 현재 페이지의 호스트를 기반으로 WebSocket URL 생성
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        
-        // 로컬 개발 환경인지 확인
-        if (host.includes('localhost') || host.includes('127.0.0.1')) {
-            return 'ws://localhost:3000';
-        }
-        
-        // Vercel 배포 환경
-        return `${protocol}//${host}`;
-    }
-    
     generatePlayerId() {
         return 'player_' + Math.random().toString(36).substr(2, 9);
     }
     
     connectWebSocket() {
-        // WebSocket 시도 후 실패하면 HTTP 폴링으로 대체
         try {
             this.ws = new WebSocket(this.wsUrl);
             
@@ -845,99 +827,31 @@ class ChessGame {
             this.ws.onclose = () => {
                 console.log('WebSocket 연결 종료');
                 this.isConnected = false;
-                // HTTP 폴링으로 전환
-                this.startHttpPolling();
+                // 재연결 시도
+                setTimeout(() => {
+                    if (!this.isConnected) {
+                        this.connectWebSocket();
+                    }
+                }, 3000);
             };
             
             this.ws.onerror = (error) => {
                 console.error('WebSocket 오류:', error);
                 this.isConnected = false;
-                // HTTP 폴링으로 전환
-                this.startHttpPolling();
             };
             
         } catch (error) {
             console.error('WebSocket 연결 실패:', error);
-            // HTTP 폴링으로 대체
-            this.startHttpPolling();
+            // 로컬 테스트를 위한 시뮬레이션 모드로 전환
+            this.simulationMode = true;
         }
-    }
-    
-    // HTTP 폴링 방식으로 실시간 통신 구현
-    startHttpPolling() {
-        console.log('HTTP 폴링 모드로 전환');
-        this.pollingMode = true;
-        this.isConnected = true; // HTTP 방식으로 연결됨
-        
-        // 폴링 모드에서도 이미 진행중인 요청이 있다면 처리
-        if (this.pendingCreateRoom) {
-            console.log('대기중인 방 생성 요청 처리');
-            this.sendMessage(this.pendingCreateRoom);
-            this.pendingCreateRoom = null;
-        }
-        
-        // 3초마다 서버에서 메시지 확인
-        this.pollingInterval = setInterval(() => {
-            this.checkMessages();
-        }, 3000);
-    }
-    
-    checkMessages() {
-        if (!this.gameCode) return;
-        
-        fetch('/api/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                type: 'get_messages',
-                roomCode: this.gameCode,
-                playerId: this.playerId
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.messages && data.messages.length > 0) {
-                data.messages.forEach(message => {
-                    this.handleWebSocketMessage(message);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('메시지 확인 오류:', error);
-        });
     }
     
     sendMessage(message) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify(message));
-        } else if (this.pollingMode) {
-            // HTTP 요청으로 메시지 전송
-            fetch('/api/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    ...message,
-                    playerId: this.playerId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('HTTP 응답 받음:', data);
-                if (data.error) {
-                    console.error('서버 오류:', data.error);
-                } else {
-                    this.handleWebSocketMessage(data);
-                }
-            })
-            .catch(error => {
-                console.error('메시지 전송 오류:', error);
-            });
         } else {
-            console.log('연결되지 않음, 시뮬레이션 모드');
+            console.log('WebSocket 연결되지 않음, 시뮬레이션 모드');
         }
     }
     
