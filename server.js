@@ -5,9 +5,13 @@ const fs = require('fs');
 
 // HTTP 서버 생성 (정적 파일 서빙)
 const server = http.createServer((req, res) => {
+    console.log('요청된 URL:', req.url);
+    
     let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
     let extname = path.extname(filePath);
     let contentType = 'text/html; charset=utf-8';
+    
+    console.log('파일 경로:', filePath);
 
     switch (extname) {
         case '.js':
@@ -21,19 +25,27 @@ const server = http.createServer((req, res) => {
             break;
     }
 
-    fs.readFile(filePath, 'utf8', (err, content) => {
+    // 파일 존재 여부 먼저 확인
+    fs.access(filePath, fs.constants.F_OK, (err) => {
         if (err) {
-            if (err.code === 'ENOENT') {
-                res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-                res.end('파일을 찾을 수 없습니다', 'utf-8');
-            } else {
+            console.log('파일 없음:', filePath);
+            res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end('파일을 찾을 수 없습니다: ' + req.url, 'utf-8');
+            return;
+        }
+        
+        // 파일이 존재하면 읽기
+        fs.readFile(filePath, 'utf8', (err, content) => {
+            if (err) {
+                console.log('파일 읽기 오류:', err);
                 res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end('서버 오류: ' + err.code, 'utf-8');
+            } else {
+                console.log('파일 전송 성공:', filePath);
+                res.writeHead(200, { 'Content-Type': contentType });
+                res.end(content, 'utf-8');
             }
-        } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content, 'utf-8');
-        }
+        });
     });
 });
 
