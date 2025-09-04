@@ -28,6 +28,8 @@ class ChessGame {
         this.wsUrl = this.getWebSocketUrl();
         this.playerId = this.generatePlayerId();
         this.isConnected = false;
+        this.pollingMode = false;
+        this.pendingCreateRoom = null;
         
         // 체스 기물 유니코드
         this.pieces = {
@@ -113,18 +115,19 @@ class ChessGame {
         this.isRoomCreated = true;
         this.isOnlineGame = true;
         
+        const createRoomMessage = {
+            type: 'create_room',
+            hostName: hostName,
+            playerId: this.playerId
+        };
+        
         if (this.isConnected) {
             // 서버에 방 생성 요청
-            this.sendMessage({
-                type: 'create_room',
-                hostName: hostName,
-                playerId: this.playerId
-            });
+            this.sendMessage(createRoomMessage);
         } else {
-            // 오프라인 모드 (기존 시뮬레이션)
-            this.isRoomHost = true;
-            this.generateGameCode();
-            this.showGameCode();
+            // WebSocket 연결 대기 중이면 요청 저장
+            this.pendingCreateRoom = createRoomMessage;
+            console.log('연결 대기 중, 방 생성 요청 저장됨');
         }
         
         this.initializeBoard();
@@ -866,6 +869,13 @@ class ChessGame {
         this.pollingMode = true;
         this.isConnected = true; // HTTP 방식으로 연결됨
         
+        // 폴링 모드에서도 이미 진행중인 요청이 있다면 처리
+        if (this.pendingCreateRoom) {
+            console.log('대기중인 방 생성 요청 처리');
+            this.sendMessage(this.pendingCreateRoom);
+            this.pendingCreateRoom = null;
+        }
+        
         // 3초마다 서버에서 메시지 확인
         this.pollingInterval = setInterval(() => {
             this.checkMessages();
@@ -916,8 +926,11 @@ class ChessGame {
             })
             .then(response => response.json())
             .then(data => {
-                if (data.response) {
-                    this.handleWebSocketMessage(data.response);
+                console.log('HTTP 응답 받음:', data);
+                if (data.error) {
+                    console.error('서버 오류:', data.error);
+                } else {
+                    this.handleWebSocketMessage(data);
                 }
             })
             .catch(error => {
