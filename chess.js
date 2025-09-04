@@ -25,7 +25,7 @@ class ChessGame {
         
         // WebSocket 통신
         this.ws = null;
-        this.wsUrl = 'ws://localhost:3000'; // 개발용 로컬 서버
+        this.wsUrl = this.getWebSocketUrl();
         this.playerId = this.generatePlayerId();
         this.isConnected = false;
         
@@ -802,11 +802,26 @@ class ChessGame {
     }
     
     // WebSocket 통신 메서드들
+    getWebSocketUrl() {
+        // 현재 페이지의 호스트를 기반으로 WebSocket URL 생성
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        
+        // 로컬 개발 환경인지 확인
+        if (host.includes('localhost') || host.includes('127.0.0.1')) {
+            return 'ws://localhost:3000';
+        }
+        
+        // Vercel 배포 환경
+        return `${protocol}//${host}`;
+    }
+    
     generatePlayerId() {
         return 'player_' + Math.random().toString(36).substr(2, 9);
     }
     
     connectWebSocket() {
+        // WebSocket 시도 후 실패하면 HTTP 폴링으로 대체
         try {
             this.ws = new WebSocket(this.wsUrl);
             
@@ -827,31 +842,89 @@ class ChessGame {
             this.ws.onclose = () => {
                 console.log('WebSocket 연결 종료');
                 this.isConnected = false;
-                // 재연결 시도
-                setTimeout(() => {
-                    if (!this.isConnected) {
-                        this.connectWebSocket();
-                    }
-                }, 3000);
+                // HTTP 폴링으로 전환
+                this.startHttpPolling();
             };
             
             this.ws.onerror = (error) => {
                 console.error('WebSocket 오류:', error);
                 this.isConnected = false;
+                // HTTP 폴링으로 전환
+                this.startHttpPolling();
             };
             
         } catch (error) {
             console.error('WebSocket 연결 실패:', error);
-            // 로컬 테스트를 위한 시뮬레이션 모드로 전환
-            this.simulationMode = true;
+            // HTTP 폴링으로 대체
+            this.startHttpPolling();
         }
+    }
+    
+    // HTTP 폴링 방식으로 실시간 통신 구현
+    startHttpPolling() {
+        console.log('HTTP 폴링 모드로 전환');
+        this.pollingMode = true;
+        this.isConnected = true; // HTTP 방식으로 연결됨
+        
+        // 3초마다 서버에서 메시지 확인
+        this.pollingInterval = setInterval(() => {
+            this.checkMessages();
+        }, 3000);
+    }
+    
+    checkMessages() {
+        if (!this.gameCode) return;
+        
+        fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: 'get_messages',
+                roomCode: this.gameCode,
+                playerId: this.playerId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(message => {
+                    this.handleWebSocketMessage(message);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('메시지 확인 오류:', error);
+        });
     }
     
     sendMessage(message) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify(message));
+        } else if (this.pollingMode) {
+            // HTTP 요청으로 메시지 전송
+            fetch('/api/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ...message,
+                    playerId: this.playerId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.response) {
+                    this.handleWebSocketMessage(data.response);
+                }
+            })
+            .catch(error => {
+                console.error('메시지 전송 오류:', error);
+            });
         } else {
-            console.log('WebSocket 연결되지 않음, 시뮬레이션 모드');
+            console.log('연결되지 않음, 시뮬레이션 모드');
         }
     }
     
