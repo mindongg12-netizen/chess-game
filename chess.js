@@ -918,6 +918,10 @@ class ChessGame {
     
     async sendMessage(message) {
         console.log('📤 HTTP API 요청:', message.type);
+        console.log('📤 전송 데이터:', message);
+        console.log('🏠 현재 게임 코드:', this.gameCode);
+        console.log('🆔 현재 플레이어 ID:', this.playerId);
+        
         try {
             const response = await fetch(`${this.apiUrl}/api/action`, {
                 method: 'POST',
@@ -934,7 +938,16 @@ class ChessGame {
                 this.handleApiResponse(result);
             } else if (result.error) {
                 console.error('❌ API 오류:', result.error);
-                alert('오류: ' + result.error);
+                console.error('❌ 실패한 요청:', message);
+                
+                // 방이 사라진 경우 게임 초기화
+                if (result.error.includes('존재하지 않는') || result.error.includes('방')) {
+                    console.log('🔄 방이 사라짐 - 메인 메뉴로 돌아감');
+                    alert('게임 방이 사라졌습니다. 메인 메뉴로 돌아갑니다.');
+                    this.backToMenu();
+                } else {
+                    alert('오류: ' + result.error);
+                }
             }
         } catch (error) {
             console.error('🚨 HTTP 요청 실패:', error);

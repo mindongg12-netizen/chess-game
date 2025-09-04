@@ -134,13 +134,16 @@ function createRoom(data) {
         guestId: null,
         guestName: null,
         gameStarted: false,
-        lastActivity: Date.now()
+        lastActivity: Date.now(),
+        createdAt: Date.now()
     };
     
     gameRooms.set(roomCode, room);
     playerMessages.set(data.playerId, []);
     
     console.log('🏠 방 생성:', roomCode, '방장:', data.hostName);
+    console.log('🗂️ 방 생성 후 전체 방 목록:', Array.from(gameRooms.keys()));
+    console.log('📝 방 상세 정보:', room);
     
     return {
         success: true,
@@ -228,12 +231,16 @@ function startGame(data) {
 
 function handleMove(data) {
     console.log('♟️ 이동 요청 수신:', data);
+    console.log('🗂️ 현재 전체 방 목록:', Array.from(gameRooms.keys()));
+    console.log('🔍 찾는 방 코드:', data.roomCode);
+    
     const room = gameRooms.get(data.roomCode);
     
     console.log('🏠 방 정보:', room);
     
     if (!room) {
         console.log('❌ 방을 찾을 수 없음');
+        console.log('🗂️ 사용 가능한 방들:', Array.from(gameRooms.entries()));
         return { error: '존재하지 않는 방입니다' };
     }
     
@@ -295,8 +302,30 @@ const players = new Map();
 
 // 5자리 랜덤 코드 생성
 function generateRoomCode() {
-    return Math.floor(10000 + Math.random() * 90000).toString();
+    let code;
+    do {
+        code = Math.floor(10000 + Math.random() * 90000).toString();
+    } while (gameRooms.has(code)); // 중복 방지
+    return code;
 }
+
+// 주기적으로 비활성 방 정리 (30분 이상 비활성)
+setInterval(() => {
+    const now = Date.now();
+    const maxInactiveTime = 30 * 60 * 1000; // 30분
+    
+    for (const [roomCode, room] of gameRooms.entries()) {
+        if (now - room.lastActivity > maxInactiveTime) {
+            console.log('🧹 비활성 방 정리:', roomCode);
+            gameRooms.delete(roomCode);
+            // 관련 메시지도 정리
+            if (room.hostId) playerMessages.delete(room.hostId);
+            if (room.guestId) playerMessages.delete(room.guestId);
+        }
+    }
+    
+    console.log('📊 현재 활성 방 개수:', gameRooms.size);
+}, 5 * 60 * 1000); // 5분마다 실행
 
 // WebSocket 연결 처리
 wss.on('connection', (ws) => {
@@ -525,11 +554,9 @@ function handlePlayerDisconnect(ws) {
             }));
         }
         
-        // 방 정리
-        if (room.host === ws || room.guest === ws) {
-            rooms.delete(player.room);
-            console.log('방 삭제됨:', player.room);
-        }
+        // ⚠️ HTTP API 모드에서는 방을 삭제하지 않음 (WebSocket 연결 끊김과 무관)
+        console.log('⚠️ WebSocket 연결 해제되었지만 HTTP API 모드에서는 방 유지:', player.room);
+        // rooms.delete(player.room); // 주석 처리
     }
     
     players.delete(ws);
