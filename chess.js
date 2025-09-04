@@ -565,12 +565,26 @@ class ChessGame {
     
     // 실제 게임 시작 메서드
     startActualGame() {
+        console.log('🎮 게임 시작 버튼 클릭');
+        console.log('🔗 연결 상태:', this.isConnected);
+        console.log('🌐 온라인 게임:', this.isOnlineGame);
+        console.log('🏠 방장 여부:', this.isRoomHost);
+        console.log('🏠 게임 코드:', this.gameCode);
+        console.log('🆔 플레이어 ID:', this.playerId);
+        
         if (this.isConnected && this.isOnlineGame && this.isRoomHost) {
+            console.log('📤 서버에 게임 시작 요청 전송');
             // 서버에 게임 시작 요청
             this.sendMessage({
                 type: 'start_game',
-                roomCode: this.gameCode
+                roomCode: this.gameCode,
+                playerId: this.playerId
             });
+        } else {
+            console.log('⚠️ 게임 시작 조건 불충족');
+            if (!this.isConnected) console.log('- 연결되지 않음');
+            if (!this.isOnlineGame) console.log('- 온라인 게임이 아님');
+            if (!this.isRoomHost) console.log('- 방장이 아님');
         }
         
         this.gameStarted = true;
@@ -1007,7 +1021,11 @@ class ChessGame {
         this.hostPlayerName = message.hostName;
         this.showGameCode();
         this.updatePlayerNames();
-        console.log('🏠 방장 설정 완료 - 코드:', this.gameCode);
+        console.log('🏠 방장 설정 완료');
+        console.log('- 게임 코드:', this.gameCode);
+        console.log('- 방장 여부:', this.isRoomHost);
+        console.log('- 플레이어 ID:', this.playerId);
+        console.log('- 방장 이름:', this.hostPlayerName);
     }
     
     handleRoomJoined(message) {

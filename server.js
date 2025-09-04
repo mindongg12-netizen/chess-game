@@ -185,13 +185,26 @@ function joinRoom(data) {
 }
 
 function startGame(data) {
+    console.log('🎮 게임 시작 요청:', data);
     const room = gameRooms.get(data.roomCode);
     
-    if (!room || room.hostId !== data.playerId) {
+    console.log('🏠 방 정보:', room);
+    console.log('🆔 요청자 ID:', data.playerId);
+    console.log('🏠 방장 ID:', room ? room.hostId : 'null');
+    
+    if (!room) {
+        console.log('❌ 방을 찾을 수 없음');
+        return { error: '존재하지 않는 방입니다' };
+    }
+    
+    if (room.hostId !== data.playerId) {
+        console.log('❌ 권한 없음 - 방장이 아님');
+        console.log('방장 ID:', room.hostId, '요청자 ID:', data.playerId);
         return { error: '게임을 시작할 권한이 없습니다' };
     }
     
     if (!room.guestId) {
+        console.log('❌ 참가자 없음');
         return { error: '상대방이 접속하지 않았습니다' };
     }
     
@@ -204,7 +217,7 @@ function startGame(data) {
         roomCode: data.roomCode
     });
     
-    console.log('🎮 게임 시작:', data.roomCode);
+    console.log('✅ 게임 시작 성공:', data.roomCode);
     
     return {
         success: true,
