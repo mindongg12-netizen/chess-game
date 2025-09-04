@@ -236,36 +236,62 @@ class ChessGame {
     }
     
     handleSquareClick(row, col) {
-        if (!this.gameStarted || !this.isGameInProgress) return;
+        if (!this.gameStarted || !this.isGameInProgress) {
+            console.log('⚠️ 게임이 시작되지 않음 또는 진행중이 아님');
+            return;
+        }
+        
+        console.log('🖱️ 클릭된 위치:', `(${row},${col})`);
+        console.log('🎯 현재 턴:', this.currentPlayer);
+        console.log('🏠 내가 방장:', this.isRoomHost);
+        console.log('🚪 내가 참가자:', this.isRoomGuest);
+        
+        // 플레이어 권한 체크
+        const myColor = this.isRoomHost ? 'white' : 'black';
+        console.log('🎨 내 색깔:', myColor);
+        
+        if (this.currentPlayer !== myColor) {
+            console.log('⚠️ 내 차례가 아님 - 현재:', this.currentPlayer, '나:', myColor);
+            return;
+        }
         
         const piece = this.board[row][col];
+        console.log('♟️ 클릭된 기물:', piece);
         
         // 기물을 선택하지 않은 상태에서 클릭
         if (!this.selectedSquare) {
             if (piece && piece.color === this.currentPlayer) {
+                console.log('✅ 기물 선택:', piece);
                 this.selectedSquare = { row, col };
                 this.highlightValidMoves(row, col);
+            } else {
+                console.log('⚠️ 선택할 수 없는 기물');
             }
         } else {
             // 이미 기물을 선택한 상태에서 클릭
             if (this.selectedSquare.row === row && this.selectedSquare.col === col) {
                 // 같은 칸을 다시 클릭 (선택 해제)
+                console.log('❌ 기물 선택 해제');
                 this.selectedSquare = null;
                 this.clearHighlights();
             } else if (piece && piece.color === this.currentPlayer) {
                 // 같은 색 기물을 클릭 (다른 기물 선택)
+                console.log('🔄 다른 기물 선택:', piece);
                 this.selectedSquare = { row, col };
                 this.clearHighlights();
                 this.highlightValidMoves(row, col);
             } else {
                 // 이동 시도
+                console.log('🎯 이동 시도:', `(${this.selectedSquare.row},${this.selectedSquare.col}) → (${row},${col})`);
                 if (this.isValidMove(this.selectedSquare.row, this.selectedSquare.col, row, col)) {
+                    console.log('✅ 유효한 이동');
                     this.makeMove(this.selectedSquare.row, this.selectedSquare.col, row, col);
                     this.selectedSquare = null;
                     this.clearHighlights();
                     this.switchPlayer();
                     this.updateGameStatus();
                 } else {
+                    console.log('❌ 유효하지 않은 이동');
                     this.selectedSquare = null;
                     this.clearHighlights();
                 }
@@ -1028,12 +1054,14 @@ class ChessGame {
         console.log('✅ 방 생성 완료:', message);
         this.gameCode = message.roomCode;
         this.isRoomHost = true;
+        this.isRoomGuest = false; // 명시적으로 참가자가 아님을 설정
         this.hostPlayerName = message.hostName;
         this.showGameCode();
         this.updatePlayerNames();
         console.log('🏠 방장 설정 완료');
         console.log('- 게임 코드:', this.gameCode);
-        console.log('- 방장 여부:', this.isRoomHost);
+        console.log('- 내가 방장:', this.isRoomHost);
+        console.log('- 내가 참가자:', this.isRoomGuest);
         console.log('- 플레이어 ID:', this.playerId);
         console.log('- 방장 이름:', this.hostPlayerName);
     }
@@ -1042,10 +1070,16 @@ class ChessGame {
         console.log('✅ 방 참가 완료:', message);
         this.gameCode = message.roomCode;
         this.isRoomGuest = true;
+        this.isRoomHost = false; // 명시적으로 방장이 아님을 설정
         this.hostPlayerName = message.hostName;
         this.guestPlayerName = message.guestName;
         this.updatePlayerNames();
-        console.log('🚪 참가자 설정 완료 - 방장:', this.hostPlayerName, '참가자:', this.guestPlayerName);
+        console.log('🚪 참가자 설정 완료');
+        console.log('- 방장:', this.hostPlayerName);
+        console.log('- 참가자:', this.guestPlayerName);
+        console.log('- 내가 방장:', this.isRoomHost);
+        console.log('- 내가 참가자:', this.isRoomGuest);
+        console.log('- 내 플레이어 ID:', this.playerId);
     }
     
     handlePlayerJoined(message) {
@@ -1065,8 +1099,13 @@ class ChessGame {
     
     handleGameMove(message) {
         console.log('♟️ 상대방 이동 수신:', `(${message.fromRow},${message.fromCol}) → (${message.toRow},${message.toCol})`);
+        console.log('🎯 현재 턴 (변경 전):', this.currentPlayer);
+        console.log('🎯 다음 턴 (변경 후):', message.nextPlayer);
         
         // 상대방의 이동을 내 보드에 반영
+        const movingPiece = this.board[message.fromRow][message.fromCol];
+        console.log('🚚 이동하는 기물:', movingPiece);
+        
         this.board[message.toRow][message.toCol] = this.board[message.fromRow][message.fromCol];
         this.board[message.fromRow][message.fromCol] = null;
         
@@ -1080,7 +1119,12 @@ class ChessGame {
         this.currentPlayer = message.nextPlayer;
         this.updateGameStatus();
         this.resetTurnTimer();
-        console.log('🔄 보드 업데이트 완료, 다음 플레이어:', this.currentPlayer);
+        
+        console.log('🔄 보드 업데이트 완료');
+        console.log('- 다음 플레이어:', this.currentPlayer);
+        console.log('- 내가 방장:', this.isRoomHost, '(백 기물)');
+        console.log('- 내가 참가자:', this.isRoomGuest, '(흑 기물)');
+        console.log('- 내 차례인가?:', (this.isRoomHost && this.currentPlayer === 'white') || (this.isRoomGuest && this.currentPlayer === 'black'));
     }
     
     handleGameStart(message) {
