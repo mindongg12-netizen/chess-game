@@ -234,14 +234,20 @@ function handleMove(data) {
     console.log('🗂️ 현재 전체 방 목록:', Array.from(gameRooms.keys()));
     console.log('🔍 찾는 방 코드:', data.roomCode);
     
-    const room = gameRooms.get(data.roomCode);
+    let room = gameRooms.get(data.roomCode);
+    
+    // 방이 없으면 임시로 복구 시도 (Vercel Cold Start 대응)
+    if (!room && data.roomCode && data.playerId) {
+        console.log('🔄 방이 사라짐 감지 - 임시 방 복구 시도');
+        room = attemptRoomRecovery(data.roomCode, data.playerId, data.roomInfo);
+    }
     
     console.log('🏠 방 정보:', room);
     
     if (!room) {
-        console.log('❌ 방을 찾을 수 없음');
+        console.log('❌ 방을 찾을 수 없음 (복구 실패)');
         console.log('🗂️ 사용 가능한 방들:', Array.from(gameRooms.entries()));
-        return { error: '존재하지 않는 방입니다' };
+        return { error: '게임 세션이 만료되었습니다. 새로운 게임을 시작해주세요.' };
     }
     
     if (!room.gameStarted) {
@@ -275,6 +281,66 @@ function handleMove(data) {
     console.log('📨 전송된 메시지:', moveMessage);
     
     return { success: true };
+}
+
+function attemptRoomRecovery(roomCode, playerId, roomInfo) {
+    console.log('🚑 방 복구 시도:', roomCode, '플레이어:', playerId);
+    console.log('📋 방 정보:', roomInfo);
+    
+    // 클라이언트에서 제공한 정보로 방 복구
+    const recoveredRoom = {
+        code: roomCode,
+        hostId: null,
+        hostName: roomInfo?.hostName || '방장',
+        guestId: null, 
+        guestName: roomInfo?.guestName || '참가자',
+        gameStarted: true, // 이미 게임이 진행중이었다고 가정
+        lastActivity: Date.now(),
+        createdAt: Date.now(),
+        recovered: true // 복구된 방임을 표시
+    };
+    
+    // 요청자가 방장인지 참가자인지 구분하여 설정
+    if (roomInfo?.isHost) {
+        recoveredRoom.hostId = playerId;
+        // 참가자 ID는 알 수 없으므로 임시 ID 생성
+        recoveredRoom.guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
+    } else if (roomInfo?.isGuest) {
+        recoveredRoom.guestId = playerId;
+        // 방장 ID는 알 수 없으므로 임시 ID 생성
+        recoveredRoom.hostId = 'host_' + Math.random().toString(36).substr(2, 9);
+    } else {
+        // 정보가 없으면 요청자를 방장으로 설정
+        recoveredRoom.hostId = playerId;
+        recoveredRoom.guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    gameRooms.set(roomCode, recoveredRoom);
+    
+    // 메시지 큐도 초기화
+    if (!playerMessages.has(playerId)) {
+        playerMessages.set(playerId, []);
+    }
+    if (!playerMessages.has(recoveredRoom.hostId)) {
+        playerMessages.set(recoveredRoom.hostId, []);
+    }
+    if (!playerMessages.has(recoveredRoom.guestId)) {
+        playerMessages.set(recoveredRoom.guestId, []);
+    }
+    
+    console.log('✅ 방 복구 완료:', recoveredRoom);
+    
+    // 복구 알림 메시지를 양쪽 플레이어에게 전송
+    const recoveryMessage = {
+        type: 'room_recovered',
+        message: '게임이 복구되었습니다. 계속 진행하세요.',
+        roomCode: roomCode
+    };
+    
+    addMessageToPlayer(recoveredRoom.hostId, recoveryMessage);
+    addMessageToPlayer(recoveredRoom.guestId, recoveryMessage);
+    
+    return recoveredRoom;
 }
 
 function addMessageToPlayer(playerId, message) {

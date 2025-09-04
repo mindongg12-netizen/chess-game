@@ -419,7 +419,14 @@ class ChessGame {
                 capturedPiece: capturedPiece,
                 nextPlayer: this.currentPlayer === 'white' ? 'black' : 'white',
                 roomCode: this.gameCode,
-                playerId: this.playerId
+                playerId: this.playerId,
+                // 방 복구를 위한 추가 정보
+                roomInfo: {
+                    hostName: this.hostPlayerName,
+                    guestName: this.guestPlayerName,
+                    isHost: this.isRoomHost,
+                    isGuest: this.isRoomGuest
+                }
             };
             console.log('📤 내 이동 전송:', `(${fromRow},${fromCol}) → (${toRow},${toCol})`);
             console.log('📤 이동 데이터:', moveData);
@@ -1050,6 +1057,9 @@ class ChessGame {
             case 'game_start':
                 this.handleGameStart(message);
                 break;
+            case 'room_recovered':
+                this.handleRoomRecovered(message);
+                break;
             case 'timer_sync':
                 this.handleTimerSync(message);
                 break;
@@ -1059,6 +1069,22 @@ class ChessGame {
             case 'error':
                 this.handleError(message);
                 break;
+        }
+    }
+    
+    handleRoomRecovered(message) {
+        console.log('🚑 방 복구 알림:', message);
+        
+        // 게임 상태가 복구되었음을 사용자에게 알림
+        const statusElement = document.getElementById('gameStatus');
+        if (statusElement) {
+            statusElement.textContent = '⚡ ' + message.message;
+            statusElement.style.color = '#ff9800'; // 주황색으로 복구 알림
+            
+            // 3초 후 원래 상태로 복원
+            setTimeout(() => {
+                this.updateGameStatus();
+            }, 3000);
         }
     }
     
