@@ -25,7 +25,10 @@ class ChessGame {
         
         // WebSocket 통신
         this.ws = null;
-        this.wsUrl = 'ws://localhost:3000'; // 개발용 로컬 서버
+        // 환경에 따라 WebSocket URL 자동 설정
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        this.wsUrl = `${protocol}//${host}`;
         this.playerId = this.generatePlayerId();
         this.isConnected = false;
         
