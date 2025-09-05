@@ -37,7 +37,7 @@ class ChessGame {
                 king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙'
             },
             black: {
-                king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟'
+                king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '➞', pawn: '♟'
             }
         };
 
@@ -616,28 +616,35 @@ class ChessGame {
 
     syncBoard(newBoard) {
         if (!newBoard) {
-            console.error('❌ New board data is null or undefined');
+            console.error('❌ New board data from Firebase is null or undefined.');
             return;
         }
-        let processedBoard = Array.isArray(newBoard) ? newBoard : this.convertObjectToArray(newBoard);
-        for (let i = 0; i < 8; i++) {
-             if (!processedBoard[i]) processedBoard[i] = new Array(8).fill(null);
-             else if (!Array.isArray(processedBoard[i])) processedBoard[i] = this.convertObjectToArray(processedBoard[i]);
-        }
-        this.board = processedBoard;
+    
+        // Create a new, guaranteed 8x8 board filled with nulls.
+        const verifiedBoard = Array(8).fill(null).map(() => Array(8).fill(null));
+    
+        // Safely iterate through the incoming board data, regardless of whether it's an array or an object.
+        Object.keys(newBoard).forEach(rowIndexStr => {
+            const r = parseInt(rowIndexStr, 10);
+            if (isNaN(r) || r < 0 || r >= 8) return; // Skip invalid row indices
+    
+            const newRow = newBoard[r];
+            if (newRow) {
+                // Safely iterate through the row data.
+                Object.keys(newRow).forEach(colIndexStr => {
+                    const c = parseInt(colIndexStr, 10);
+                    if (isNaN(c) || c < 0 || c >= 8) return; // Skip invalid col indices
+    
+                    // Place the piece in our clean board, ensuring it's not undefined.
+                    verifiedBoard[r][c] = newRow[c] || null;
+                });
+            }
+        });
+        
+        this.board = verifiedBoard;
         this.renderBoard();
     }
     
-    convertObjectToArray(obj, expectedLength = 8) {
-        if (!obj || typeof obj !== 'object') return new Array(expectedLength).fill(null);
-        const arr = new Array(expectedLength).fill(null);
-        Object.keys(obj).forEach(key => {
-            const index = parseInt(key);
-            if (!isNaN(index) && index >= 0 && index < expectedLength) arr[index] = obj[key];
-        });
-        return arr;
-    }
-
     handleGameStart() {
         console.log('🎮 Handling game start');
         this.gameStarted = true;
@@ -891,3 +898,4 @@ class ChessGame {
 document.addEventListener('DOMContentLoaded', () => {
     new ChessGame();
 });
+
