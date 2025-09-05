@@ -469,7 +469,7 @@ class ChessGame {
     }
 
     updateGameStatus() {
-        const playerText = this.currentPlayer === 'white' ? "White's Turn" : "Black's Turn";
+        const playerText = this.currentPlayer === 'white' ? "백말 차례" : "흑말 차례";                                                                                                                                      
         const currentPlayerElement = document.getElementById('currentPlayer');
         if (currentPlayerElement) currentPlayerElement.textContent = playerText;
         const gameStatusElement = document.getElementById('gameStatus');
@@ -843,10 +843,10 @@ class ChessGame {
         if (playerElement) playerElement.textContent = 'Waiting';
         
         if (this.isRoomHost) {
-            if (statusElement) statusElement.textContent = 'Waiting for opponent... Share the code!';
+            if (statusElement) statusElement.textContent = '상대방을 기다려주세요! 코드를 공유하세요!';
             if (startBtn) startBtn.style.display = 'inline-block';
         } else if (this.isRoomGuest) {
-            if (statusElement) statusElement.textContent = 'Waiting for the host to start the game';
+            if (statusElement) statusElement.textContent = '방장이 게임을 시작할 때까지 기다려주세요!';
             if (startBtn) startBtn.style.display = 'none';
         }
         
