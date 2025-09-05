@@ -37,7 +37,7 @@ class ChessGame {
                 king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙'
             },
             black: {
-                king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '➞', pawn: '♟'
+                king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟'
             }
         };
 
