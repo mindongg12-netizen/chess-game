@@ -62,7 +62,7 @@ class ChessGame {
         });
         
         document.getElementById('resetBtn').addEventListener('click', () => {
-            this.resetGame();
+            this.resetGameOnline();
         });
         
         document.getElementById('backToMenuBtn').addEventListener('click', () => {
@@ -176,6 +176,41 @@ class ChessGame {
         }
     }
     
+    // 온라인 게임 재시작 (Firebase 동기화)
+    async resetGameOnline() {
+        if (!this.gameRef || !this.isOnlineGame) {
+            console.log('⚠️ 온라인 게임이 아님 - 로컬 재시작');
+            this.resetGame();
+            return;
+        }
+
+        console.log('🔄 온라인 게임 재시작 요청');
+        
+        try {
+            // Firebase에 게임 재시작 신호 전송
+            const initialBoard = this.getInitialBoard();
+            
+            await this.gameRef.update({
+                board: initialBoard,
+                currentPlayer: 'white',
+                capturedPieces: { white: [], black: [] },
+                gameStarted: true,
+                isGameInProgress: true,
+                gameEnded: false,
+                winner: null,
+                gameRestarted: firebase.database.ServerValue.TIMESTAMP,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            console.log('✅ 게임 재시작 신호 Firebase 전송 완료');
+            
+        } catch (error) {
+            console.error('❌ 게임 재시작 실패:', error);
+            alert('게임 재시작에 실패했습니다: ' + error.message);
+        }
+    }
+
+    // 로컬 게임 재시작 (기존 함수)
     resetGame() {
         this.stopTurnTimer();
         this.currentPlayer = 'white';
@@ -803,6 +838,16 @@ class ChessGame {
                     this.endGame(gameData.winner);
                 }
             }
+            
+            // 게임 재시작 신호 확인
+            if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
+                console.log('🔄 게임 재시작 신호 수신:', gameData.gameRestarted);
+                
+                // 현재 게임이 종료되었거나 진행중이지 않은 상태라면 재시작 처리
+                if (!this.isGameInProgress || !this.gameStarted) {
+                    this.handleGameRestart(gameData);
+                }
+            }
         });
         
         this.listeners.push({ ref: this.gameRef, listener: gameListener });
@@ -936,6 +981,56 @@ class ChessGame {
         this.showGameButtons();
         this.updateGameStatus();
         this.startTurnTimer();
+    }
+
+    // 게임 재시작 처리
+    handleGameRestart(gameData) {
+        console.log('🔄 게임 재시작 처리:', gameData);
+        
+        // 게임 상태 초기화
+        this.gameStarted = true;
+        this.isGameInProgress = true;
+        this.currentPlayer = 'white';
+        this.selectedSquare = null;
+        this.currentTurnTime = this.turnTimeLimit;
+        
+        // 잡힌 기물 초기화
+        this.capturedPieces = { white: [], black: [] };
+        if (gameData.capturedPieces) {
+            this.capturedPieces = gameData.capturedPieces;
+        }
+        
+        // UI 상태 복구
+        const gameStatus = document.getElementById('gameStatus');
+        gameStatus.textContent = '게임이 재시작되었습니다!';
+        gameStatus.style.color = '#28a745';
+        gameStatus.style.fontSize = '1.1rem';
+        gameStatus.style.fontWeight = 'bold';
+        
+        // 타이머 표시 복구
+        const timerElement = document.getElementById('turnTimer');
+        if (timerElement) {
+            timerElement.style.display = 'block';
+        }
+        
+        // 버튼 상태 업데이트
+        this.showGameButtons();
+        
+        // 타이머 재시작
+        this.resetTurnTimer();
+        this.startTurnTimer();
+        
+        // 보드 동기화 및 렌더링
+        if (gameData.board) {
+            this.syncBoard(gameData.board);
+        }
+        
+        console.log('✅ 게임 재시작 완료');
+        
+        // 재시작 알림
+        setTimeout(() => {
+            alert('🎮 게임이 재시작되었습니다! 🎮');
+        }, 500);
     }
     
     // 게임 코드 관련 메서드들
