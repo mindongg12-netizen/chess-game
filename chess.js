@@ -18,6 +18,7 @@ class ChessGame {
         this.isGameInProgress = false;
         this.isRoomHost = false;
         this.isRoomGuest = false;
+        this.isMovePending = false; // 이동 처리 중 플래그
         
         // 플레이어 이름
         this.hostPlayerName = '';
@@ -337,6 +338,12 @@ class ChessGame {
             return;
         }
         
+        // 이동 처리 중인지 확인
+        if (this.isMovePending) {
+            console.log('⚠️ 이동 처리 중 - 추가 이동 차단');
+            return;
+        }
+        
         console.log('🖱️ 클릭된 위치:', `(${row},${col})`);
         console.log('🎯 현재 턴:', this.currentPlayer);
         console.log('🏠 내가 방장:', this.isRoomHost);
@@ -494,6 +501,10 @@ class ChessGame {
     }
     
     async makeMove(fromRow, fromCol, toRow, toCol) {
+        // 이동 처리 시작
+        this.isMovePending = true;
+        console.log('🔒 이동 처리 시작 - 추가 이동 차단');
+        
         const piece = this.board[fromRow][fromCol];
         const capturedPiece = this.board[toRow][toCol];
         
@@ -543,6 +554,10 @@ class ChessGame {
                 
             } catch (error) {
                 console.error('❌ 이동 전송 실패:', error);
+                // 오류 발생 시에도 플래그 해제
+                this.isMovePending = false;
+                console.log('🔓 이동 실패 - 이동 차단 해제');
+                return;
             }
         }
         
@@ -559,6 +574,9 @@ class ChessGame {
         }
         
         this.renderBoard();
+        
+        // 이동 처리 완료 - 플래그 해제는 Firebase 리스너에서 처리
+        console.log('✅ 이동 처리 완료 - Firebase 응답 대기 중');
     }
     
     // 게임 종료 처리
@@ -831,6 +849,13 @@ class ChessGame {
                 this.currentPlayer = gameData.currentPlayer;
                 this.updateGameStatus();
                 this.resetTurnTimer();
+                
+                // 플레이어가 변경되었으므로 이동 플래그 해제
+                if (this.isMovePending) {
+                    this.isMovePending = false;
+                    console.log('🔓 플레이어 변경 - 이동 차단 해제');
+                }
+                
                 console.log('✅ 턴 표시 업데이트 완료:', this.currentPlayer);
             }
             
@@ -1001,6 +1026,7 @@ class ChessGame {
         this.gameStarted = true;
         this.isGameInProgress = true;
         this.currentPlayer = 'white';
+        this.isMovePending = false; // 게임 시작 시 이동 플래그 초기화
         this.showGameButtons();
         this.updateGameStatus();
         this.startTurnTimer();
@@ -1016,6 +1042,7 @@ class ChessGame {
         this.currentPlayer = 'white';
         this.selectedSquare = null;
         this.currentTurnTime = this.turnTimeLimit;
+        this.isMovePending = false; // 게임 재시작 시 이동 플래그 초기화
         
         // 잡힌 기물 초기화
         this.capturedPieces = { white: [], black: [] };
