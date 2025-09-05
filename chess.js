@@ -23,12 +23,11 @@ class ChessGame {
         this.hostPlayerName = '';
         this.guestPlayerName = '';
         
-        // HTTP API 통신 (WebSocket 대신)
-        this.ws = null;
-        this.apiUrl = window.location.origin;
+        // Firebase 실시간 통신
+        this.database = window.database; // firebase-config.js에서 초기화된 database
         this.playerId = this.generatePlayerId();
-        this.isConnected = true; // HTTP는 항상 연결됨
-        this.pollingInterval = null;
+        this.gameRef = null;
+        this.listeners = [];
         
         // 체스 기물 유니코드
         this.pieces = {
@@ -50,13 +49,11 @@ class ChessGame {
             }
         };
         
-        console.log('🎯 체스게임 초기화 시작');
+        console.log('🔥 Firebase 체스게임 초기화 시작');
         console.log('🆔 플레이어 ID:', this.playerId);
-        console.log('🌐 API URL:', this.apiUrl);
-        console.log('🔌 HTTP 연결 상태: 항상 연결됨');
+        console.log('🔥 Firebase 연결 상태: 준비됨');
         
         this.initializeEventListeners();
-        this.startMessagePolling();
     }
     
     initializeEventListeners() {
@@ -97,7 +94,7 @@ class ChessGame {
         });
     }
     
-    startGame() {
+    async startGame() {
         // 이름 입력 검증
         const hostNameInput = document.getElementById('hostNameInput');
         const hostName = hostNameInput.value.trim();
@@ -112,29 +109,51 @@ class ChessGame {
             return;
         }
         
-        console.log('🎮 방 생성 시작 - 방장:', hostName);
-        console.log('🔌 WebSocket 연결 상태:', this.isConnected);
+        console.log('🔥 Firebase 방 생성 시작 - 방장:', hostName);
         
-        // 온라인 방 생성
-        this.hostPlayerName = hostName;
-        document.getElementById('gameMenu').style.display = 'none';
-        document.getElementById('gameContainer').style.display = 'block';
-        this.isRoomCreated = true;
-        this.isOnlineGame = true;
-        this.isRoomHost = true;
-        
-        console.log('📤 서버에 방 생성 요청 전송');
-        // HTTP API로 방 생성 요청
-        this.sendMessage({
-            type: 'create_room',
-            hostName: hostName,
-            playerId: this.playerId
-        });
-        
-        this.initializeBoard();
-        this.renderBoard();
-        this.showWaitingState();
-        this.updatePlayerNames();
+        try {
+            // 5자리 랜덤 코드 생성
+            this.gameCode = this.generateRoomCode();
+            this.hostPlayerName = hostName;
+            this.isRoomHost = true;
+            this.isRoomGuest = false;
+            this.isOnlineGame = true;
+            
+            // Firebase에 방 생성
+            const roomData = {
+                hostId: this.playerId,
+                hostName: hostName,
+                guestId: null,
+                guestName: null,
+                gameStarted: false,
+                currentPlayer: 'white',
+                board: this.getInitialBoard(),
+                capturedPieces: { white: [], black: [] },
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            this.gameRef = database.ref('games/' + this.gameCode);
+            await this.gameRef.set(roomData);
+            
+            console.log('✅ Firebase 방 생성 완료:', this.gameCode);
+            
+            // UI 전환
+            document.getElementById('gameMenu').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            
+            this.showGameCode();
+            this.initializeBoard();
+            this.renderBoard();
+            this.showWaitingState();
+            this.updatePlayerNames();
+            
+            // Firebase 리스너 설정
+            this.setupFirebaseListeners();
+            
+        } catch (error) {
+            console.error('❌ 방 생성 실패:', error);
+            alert('방 생성에 실패했습니다: ' + error.message);
+        }
     }
     
     resetGame() {
@@ -543,6 +562,128 @@ class ChessGame {
         }
         
         return validMoves;
+    }
+    
+    // Firebase 관련 메서드들
+    generateRoomCode() {
+        return Math.floor(10000 + Math.random() * 90000).toString();
+    }
+    
+    // 초기 보드 상태 반환
+    getInitialBoard() {
+        const board = Array(8).fill(null).map(() => Array(8).fill(null));
+        
+        // 백 기물 배치
+        board[7] = [
+            { type: 'rook', color: 'white' },
+            { type: 'knight', color: 'white' },
+            { type: 'bishop', color: 'white' },
+            { type: 'queen', color: 'white' },
+            { type: 'king', color: 'white' },
+            { type: 'bishop', color: 'white' },
+            { type: 'knight', color: 'white' },
+            { type: 'rook', color: 'white' }
+        ];
+        
+        for (let i = 0; i < 8; i++) {
+            board[6][i] = { type: 'pawn', color: 'white' };
+        }
+        
+        // 흑 기물 배치
+        board[0] = [
+            { type: 'rook', color: 'black' },
+            { type: 'knight', color: 'black' },
+            { type: 'bishop', color: 'black' },
+            { type: 'queen', color: 'black' },
+            { type: 'king', color: 'black' },
+            { type: 'bishop', color: 'black' },
+            { type: 'knight', color: 'black' },
+            { type: 'rook', color: 'black' }
+        ];
+        
+        for (let i = 0; i < 8; i++) {
+            board[1][i] = { type: 'pawn', color: 'black' };
+        }
+        
+        return board;
+    }
+    
+    // Firebase 리스너 설정
+    setupFirebaseListeners() {
+        if (!this.gameRef) return;
+        
+        console.log('🔥 Firebase 리스너 설정');
+        
+        // 게임 상태 변경 리스너
+        const gameListener = this.gameRef.on('value', (snapshot) => {
+            const gameData = snapshot.val();
+            if (!gameData) return;
+            
+            console.log('🔥 게임 상태 업데이트:', gameData);
+            
+            // 참가자 정보 업데이트
+            if (gameData.guestId && !this.guestPlayerName) {
+                this.guestPlayerName = gameData.guestName;
+                this.updatePlayerNames();
+                
+                if (this.isRoomHost) {
+                    const statusElement = document.getElementById('gameStatus');
+                    if (statusElement) {
+                        statusElement.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
+                        statusElement.style.color = '#28a745';
+                    }
+                }
+            }
+            
+            // 게임 시작 상태 업데이트
+            if (gameData.gameStarted && !this.isGameInProgress) {
+                this.handleGameStart();
+            }
+            
+            // 보드 상태 동기화
+            if (gameData.board) {
+                this.syncBoard(gameData.board);
+            }
+            
+            // 현재 플레이어 동기화
+            if (gameData.currentPlayer !== this.currentPlayer) {
+                this.currentPlayer = gameData.currentPlayer;
+                this.updateGameStatus();
+                this.resetTurnTimer();
+            }
+            
+            // 잡힌 기물 동기화
+            if (gameData.capturedPieces) {
+                this.capturedPieces = gameData.capturedPieces;
+                this.updateCapturedPieces();
+            }
+        });
+        
+        this.listeners.push({ ref: this.gameRef, listener: gameListener });
+    }
+    
+    // 보드 동기화
+    syncBoard(newBoard) {
+        let hasChanges = false;
+        
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const currentPiece = this.board[row][col];
+                const newPiece = newBoard[row][col];
+                
+                if (JSON.stringify(currentPiece) !== JSON.stringify(newPiece)) {
+                    hasChanges = true;
+                    break;
+                }
+            }
+            if (hasChanges) break;
+        }
+        
+        if (hasChanges) {
+            console.log('🔄 보드 동기화');
+            this.board = newBoard;
+            this.renderBoard();
+        }
     }
     
     // 게임 코드 관련 메서드들
