@@ -515,7 +515,20 @@ class ChessGame {
         if (timerElement) {
             timerElement.textContent = this.currentTurnTime;
             timerElement.classList.toggle('warning', this.currentTurnTime <= 5);
+            
+            // 요소 가시성 강제 설정
+            timerElement.style.display = 'block';
+            timerElement.style.visibility = 'visible';
+            timerElement.style.opacity = '1';
+            
+            // 디버깅 정보
             console.log(`🕐 타이머 표시 업데이트: ${this.currentTurnTime}초`);
+            console.log('📱 타이머 요소 상태:');
+            console.log('  - textContent:', timerElement.textContent);
+            console.log('  - display:', getComputedStyle(timerElement).display);
+            console.log('  - visibility:', getComputedStyle(timerElement).visibility);
+            console.log('  - opacity:', getComputedStyle(timerElement).opacity);
+            console.log('  - position:', getComputedStyle(timerElement).position);
         } else {
             console.error('❌ turnTimer 엘리먼트를 찾을 수 없음');
         }
@@ -709,9 +722,43 @@ class ChessGame {
         
         // 타이머 표시 복구
         const timerElement = document.getElementById('turnTimer');
+        const timerContainer = timerElement ? timerElement.closest('.timer-container') : null;
+        
         if (timerElement) {
+            // 타이머 요소 가시성 복구
             timerElement.style.display = 'block';
+            timerElement.style.visibility = 'visible';
+            timerElement.style.opacity = '1';
+            
+            // 타이머 컨테이너도 확인
+            if (timerContainer) {
+                timerContainer.style.display = 'flex';
+                timerContainer.style.visibility = 'visible';
+                timerContainer.style.opacity = '1';
+                console.log('🕐 타이머 컨테이너 표시 복구 완료');
+            }
+            
             console.log('🕐 타이머 표시 복구 완료');
+            console.log('📱 복구 후 타이머 상태:');
+            console.log('  - display:', getComputedStyle(timerElement).display);
+            console.log('  - visibility:', getComputedStyle(timerElement).visibility);
+            console.log('  - opacity:', getComputedStyle(timerElement).opacity);
+        } else {
+            console.error('❌ turnTimer 엘리먼트를 찾을 수 없음');
+        }
+        
+        // 게임 UI 전체 가시성 확인
+        const gameContainer = document.getElementById('gameContainer');
+        const gameInfo = gameContainer ? gameContainer.querySelector('.game-info') : null;
+        
+        if (gameContainer) {
+            gameContainer.style.display = 'block';
+            console.log('🎮 게임 컨테이너 표시 확인');
+        }
+        
+        if (gameInfo) {
+            gameInfo.style.display = 'flex';
+            console.log('📋 게임 정보 영역 표시 확인');
         }
         
         // 버튼 상태 업데이트
@@ -721,6 +768,12 @@ class ChessGame {
         this.resetTurnTimer();
         this.startTurnTimer(); // 타이머 시작 추가
         this.updateTimerDisplay(); // 타이머 표시 업데이트
+        
+        // 1초 후 다시 한번 타이머 업데이트 (안전장치)
+        setTimeout(() => {
+            console.log('🔄 1초 후 타이머 재확인');
+            this.updateTimerDisplay();
+        }, 1000);
         
         // 게임 상태 업데이트
         this.updateGameStatus();
