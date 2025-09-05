@@ -515,6 +515,9 @@ class ChessGame {
         if (timerElement) {
             timerElement.textContent = this.currentTurnTime;
             timerElement.classList.toggle('warning', this.currentTurnTime <= 5);
+            console.log(`🕐 타이머 표시 업데이트: ${this.currentTurnTime}초`);
+        } else {
+            console.error('❌ turnTimer 엘리먼트를 찾을 수 없음');
         }
     }
     
@@ -681,29 +684,58 @@ class ChessGame {
     }
     
     handleGameRestart(gameData) {
-        console.log('🔄 Handling game restart:', gameData);
+        console.log('🔄 게임 재시작 처리:', gameData);
+        
+        // 게임 상태 초기화
         this.gameStarted = true;
         this.isGameInProgress = true;
         this.currentPlayer = 'white';
         this.selectedSquare = null;
         this.currentTurnTime = this.turnTimeLimit;
-        this.isMovePending = false;
-        this.capturedPieces = gameData.capturedPieces || { white: [], black: [] };
+        this.isMovePending = false; // 게임 재시작 시 이동 플래그 초기화
         
+        // 잡힌 기물 초기화
+        this.capturedPieces = { white: [], black: [] };
+        if (gameData.capturedPieces) {
+            this.capturedPieces = gameData.capturedPieces;
+        }
+        
+        // UI 상태 복구
         const gameStatus = document.getElementById('gameStatus');
-        gameStatus.textContent = 'Game has been restarted!';
+        gameStatus.textContent = '게임이 재시작되었습니다!';
         gameStatus.style.color = '#28a745';
+        gameStatus.style.fontSize = '1.1rem';
+        gameStatus.style.fontWeight = 'bold';
         
+        // 타이머 표시 복구
         const timerElement = document.getElementById('turnTimer');
-        if (timerElement) timerElement.style.display = 'block';
+        if (timerElement) {
+            timerElement.style.display = 'block';
+            console.log('🕐 타이머 표시 복구 완료');
+        }
         
+        // 버튼 상태 업데이트
         this.showGameButtons();
+        
+        // 타이머 재시작 - 중요!
         this.resetTurnTimer();
+        this.startTurnTimer(); // 타이머 시작 추가
+        this.updateTimerDisplay(); // 타이머 표시 업데이트
         
-        if (gameData.board) this.syncBoard(gameData.board);
+        // 게임 상태 업데이트
+        this.updateGameStatus();
         
-        console.log('✅ Game restart complete');
-        setTimeout(() => alert('🎮 The game has been restarted! 🎮'), 500);
+        // 보드 동기화 및 렌더링
+        if (gameData.board) {
+            this.syncBoard(gameData.board);
+        }
+        
+        console.log('✅ 게임 재시작 완료');
+        
+        // 재시작 알림
+        setTimeout(() => {
+            alert('🎮 게임이 재시작되었습니다! 🎮');
+        }, 500);
     }
     
     showGameCode() {
