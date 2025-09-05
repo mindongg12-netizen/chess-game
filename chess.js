@@ -1,3 +1,19 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBnpdg6qIjdJb7p9lroLalSjCnpOLxoo20",
+    authDomain: "chess-game-d754b.firebaseapp.com",
+    projectId: "chess-game-d754b",
+    storageBucket: "chess-game-d754b.firebasestorage.app",
+    messagingSenderId: "103036710435",
+    appId: "1:103036710435:web:b79c432d7f04aef1a8cb96"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
 class ChessGame {
     constructor() {
         this.board = [];
@@ -123,10 +139,13 @@ class ChessGame {
         this.isOnlineGame = true;
         this.isRoomHost = true;
         
-        // 클라이언트에서 직접 방 코드 생성 (서버 의존성 제거)
-        this.generateGameCode();
-        this.showGameCode();
-        console.log('🏠 방 생성 완료 - 코드:', this.gameCode);
+        console.log('📤 서버에 방 생성 요청 전송');
+        // HTTP API로 방 생성 요청
+        this.sendMessage({
+            type: 'create_room',
+            hostName: hostName,
+            playerId: this.playerId
+        });
         
         this.initializeBoard();
         this.renderBoard();
@@ -419,7 +438,11 @@ class ChessGame {
                 playerId: this.playerId
             };
             console.log('📤 내 이동 전송:', `(${fromRow},${fromCol}) → (${toRow},${toCol})`);
-            this.sendSimpleMessage(moveData);
+            console.log('📤 이동 데이터:', moveData);
+            console.log('🔗 연결 상태:', this.isConnected);
+            console.log('🌐 온라인 게임:', this.isOnlineGame);
+            console.log('🎮 게임 진행중:', this.isGameInProgress);
+            this.sendMessage(moveData);
         } else {
             console.log('⚠️ 이동 전송 조건 불충족');
             console.log('- 연결 상태:', this.isConnected);
@@ -599,13 +622,19 @@ class ChessGame {
         console.log('🏠 게임 코드:', this.gameCode);
         console.log('🆔 플레이어 ID:', this.playerId);
         
-        if (this.isRoomHost) {
-            // 참가자에게 게임 시작 알림 전송
-            this.sendSimpleMessage({
-                type: 'game_start',
+        if (this.isConnected && this.isOnlineGame && this.isRoomHost) {
+            console.log('📤 서버에 게임 시작 요청 전송');
+            // 서버에 게임 시작 요청
+            this.sendMessage({
+                type: 'start_game',
                 roomCode: this.gameCode,
                 playerId: this.playerId
             });
+        } else {
+            console.log('⚠️ 게임 시작 조건 불충족');
+            if (!this.isConnected) console.log('- 연결되지 않음');
+            if (!this.isOnlineGame) console.log('- 온라인 게임이 아님');
+            if (!this.isRoomHost) console.log('- 방장이 아님');
         }
         
         this.gameStarted = true;
@@ -697,14 +726,10 @@ class ChessGame {
         this.guestPlayerName = guestName;
         this.isRoomGuest = true;
         
-        // 클라이언트에서 직접 방 참가 처리
-        this.gameCode = enteredCode;
-        this.isRoomGuest = true;
-        this.hostPlayerName = '방장'; // 기본값
-        
-        // 방장에게 참가 알림 전송
-        this.sendSimpleMessage({
-            type: 'player_joined',
+        console.log('📤 서버에 방 참가 요청 전송');
+        // HTTP API로 방 참가 요청
+        this.sendMessage({
+            type: 'join_room',
             roomCode: enteredCode,
             guestName: guestName,
             playerId: this.playerId
@@ -719,7 +744,6 @@ class ChessGame {
         this.renderBoard();
         this.showWaitingState();
         this.updatePlayerNames();
-        console.log('🚪 방 참가 완료 - 코드:', enteredCode);
     }
     
     simulateJoinRoom(code) {
@@ -908,12 +932,10 @@ class ChessGame {
         }
     }
     
-    async sendSimpleMessage(message) {
-        console.log('📤 메시지 전송:', message.type, '방:', message.roomCode);
-        console.log('📤 전송 데이터:', message);
-        
+    async sendMessage(message) {
+        console.log('📤 HTTP API 요청:', message.type);
         try {
-            const response = await fetch(`${this.apiUrl}/api/send`, {
+            const response = await fetch(`${this.apiUrl}/api/action`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -922,9 +944,17 @@ class ChessGame {
             });
             
             const result = await response.json();
-            console.log('✅ 메시지 전송 완료:', result);
+            console.log('📥 API 응답:', result);
+            
+            if (result.success) {
+                this.handleApiResponse(result);
+            } else if (result.error) {
+                console.error('❌ API 오류:', result.error);
+                alert('오류: ' + result.error);
+            }
         } catch (error) {
-            console.error('❌ 메시지 전송 실패:', error);
+            console.error('🚨 HTTP 요청 실패:', error);
+            this.handleLocalSimulation(message);
         }
     }
     
@@ -944,73 +974,32 @@ class ChessGame {
     }
     
     startMessagePolling() {
-        console.log('🔄 메시지 폴링 시작 (1초 간격)');
+        console.log('🔄 메시지 폴링 시작 (500ms 간격)');
         this.pollingInterval = setInterval(() => {
             this.checkMessages();
-        }, 1000); // 1초마다 메시지 확인
+        }, 500); // 0.5초마다 메시지 확인 (더 빠른 반응)
     }
     
     async checkMessages() {
-        if (!this.gameCode) {
-            console.log('⚠️ 방 코드 없음 - 폴링 스킵');
-            return;
-        }
-        
-        console.log('📡 메시지 체크 중 - 방:', this.gameCode);
-        
         try {
-            const response = await fetch(`${this.apiUrl}/api/get/${this.gameCode}`);
+            const response = await fetch(`${this.apiUrl}/api/messages/${this.playerId}`);
             const result = await response.json();
-            
-            console.log('📥 폴링 응답:', result);
             
             if (result.messages && result.messages.length > 0) {
                 console.log('📬 새 메시지 수신:', result.messages.length, '개');
+                console.log('📬 메시지 내용:', result.messages);
                 for (const message of result.messages) {
-                    console.log('🔄 메시지 처리:', message.type, message);
-                    this.handleSimpleMessage(message);
+                    console.log('🔄 메시지 처리:', message.type);
+                    this.handleWebSocketMessage(message);
                 }
-            } else {
-                console.log('📭 새 메시지 없음');
             }
         } catch (error) {
-            console.error('❌ 메시지 폴링 오류:', error);
-        }
-    }
-    
-    handleSimpleMessage(message) {
-        console.log('📨 메시지 처리:', message.type);
-        
-        switch (message.type) {
-            case 'player_joined':
-                if (this.isRoomHost) {
-                    this.guestPlayerName = message.guestName;
-                    this.updatePlayerNames();
-                    const statusElement = document.getElementById('gameStatus');
-                    if (statusElement) {
-                        statusElement.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
-                        statusElement.style.color = '#28a745';
-                    }
-                }
-                break;
-                
-            case 'game_start':
-                this.gameStarted = true;
-                this.isGameInProgress = true;
-                this.currentPlayer = 'white';
-                this.showGameButtons();
-                this.updateGameStatus();
-                this.startTurnTimer();
-                break;
-                
-            case 'game_move':
-                this.handleGameMove(message);
-                break;
+            console.error('메시지 폴링 오류:', error);
         }
     }
     
     handleLocalSimulation(message) {
-        // 로컬 시뮬레이션 (폴백)
+        // WebSocket 연결이 안 될 때 로컬 시뮬레이션
         console.log('🎭 로컬 시뮬레이션:', message.type);
         
         switch (message.type) {
@@ -1064,9 +1053,6 @@ class ChessGame {
             case 'game_start':
                 this.handleGameStart(message);
                 break;
-            case 'room_recovered':
-                this.handleRoomRecovered(message);
-                break;
             case 'timer_sync':
                 this.handleTimerSync(message);
                 break;
@@ -1076,22 +1062,6 @@ class ChessGame {
             case 'error':
                 this.handleError(message);
                 break;
-        }
-    }
-    
-    handleRoomRecovered(message) {
-        console.log('🚑 방 복구 알림:', message);
-        
-        // 게임 상태가 복구되었음을 사용자에게 알림
-        const statusElement = document.getElementById('gameStatus');
-        if (statusElement) {
-            statusElement.textContent = '⚡ ' + message.message;
-            statusElement.style.color = '#ff9800'; // 주황색으로 복구 알림
-            
-            // 3초 후 원래 상태로 복원
-            setTimeout(() => {
-                this.updateGameStatus();
-            }, 3000);
         }
     }
     
