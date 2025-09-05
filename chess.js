@@ -508,6 +508,23 @@ class ChessGame {
         const capturedWhiteElement = document.getElementById('capturedWhite');
         const capturedBlackElement = document.getElementById('capturedBlack');
         
+        // capturedPieces가 초기화되지 않은 경우 기본값 설정
+        if (!this.capturedPieces) {
+            console.warn('⚠️ capturedPieces가 undefined - 초기화');
+            this.capturedPieces = { white: [], black: [] };
+        }
+        
+        // white와 black 배열이 없는 경우 빈 배열로 초기화
+        if (!Array.isArray(this.capturedPieces.white)) {
+            console.warn('⚠️ capturedPieces.white가 배열이 아님 - 빈 배열로 초기화');
+            this.capturedPieces.white = [];
+        }
+        
+        if (!Array.isArray(this.capturedPieces.black)) {
+            console.warn('⚠️ capturedPieces.black가 배열이 아님 - 빈 배열로 초기화');
+            this.capturedPieces.black = [];
+        }
+        
         capturedWhiteElement.innerHTML = this.capturedPieces.white
             .map(piece => this.pieces.white[piece.type]).join(' ');
         capturedBlackElement.innerHTML = this.capturedPieces.black
@@ -699,8 +716,20 @@ class ChessGame {
             
             // 잡힌 기물 동기화
             if (gameData.capturedPieces) {
-                this.capturedPieces = gameData.capturedPieces;
+                console.log('🎯 잡힌 기물 동기화:', gameData.capturedPieces);
+                
+                // capturedPieces 데이터 검증 및 초기화
+                const validCapturedPieces = {
+                    white: Array.isArray(gameData.capturedPieces.white) ? gameData.capturedPieces.white : [],
+                    black: Array.isArray(gameData.capturedPieces.black) ? gameData.capturedPieces.black : []
+                };
+                
+                this.capturedPieces = validCapturedPieces;
                 this.updateCapturedPieces();
+            } else if (!this.capturedPieces) {
+                // capturedPieces가 없는 경우 기본값으로 초기화
+                console.warn('⚠️ Firebase에서 capturedPieces 없음 - 기본값으로 초기화');
+                this.capturedPieces = { white: [], black: [] };
             }
         });
         
