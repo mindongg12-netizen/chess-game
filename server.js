@@ -93,28 +93,6 @@ function handleApiRequest(req, res) {
                 const playerId = url.split('/').pop();
                 const response = getPlayerMessages(playerId);
                 sendJsonResponse(res, response);
-            } else if (method === 'GET' && url === '/api/heartbeat') {
-                // 하트비트 엔드포인트
-                const response = {
-                    status: 'alive',
-                    timestamp: Date.now(),
-                    activeRooms: gameRooms.size,
-                    activePlayers: playerMessages.size
-                };
-                sendJsonResponse(res, response);
-            } else if (method === 'GET' && url === '/api/status') {
-                // 서버 상태 확인 엔드포인트
-                const response = {
-                    serverTime: Date.now(),
-                    rooms: Array.from(gameRooms.keys()),
-                    roomDetails: Array.from(gameRooms.entries()).map(([code, room]) => ({
-                        code,
-                        players: room.hostName && room.guestName ? 2 : 1,
-                        gameStarted: room.gameStarted,
-                        lastActivity: room.lastActivity
-                    }))
-                };
-                sendJsonResponse(res, response);
             } else {
                 sendJsonResponse(res, { error: '알 수 없는 API 엔드포인트' }, 404);
             }
