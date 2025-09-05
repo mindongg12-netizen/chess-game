@@ -246,9 +246,26 @@ class ChessGame {
     
     renderBoard() {
         const boardElement = document.getElementById('chessboard');
+        if (!boardElement) {
+            console.error('❌ chessboard 요소를 찾을 수 없습니다');
+            return;
+        }
+        
+        // 보드 배열 유효성 검사
+        if (!this.board || !Array.isArray(this.board) || this.board.length !== 8) {
+            console.error('❌ 유효하지 않은 보드 데이터:', this.board);
+            return;
+        }
+        
         boardElement.innerHTML = '';
         
         for (let row = 0; row < 8; row++) {
+            // 행 배열 유효성 검사
+            if (!this.board[row] || !Array.isArray(this.board[row]) || this.board[row].length !== 8) {
+                console.error(`❌ 유효하지 않은 행 데이터 [${row}]:`, this.board[row]);
+                return;
+            }
+            
             for (let col = 0; col < 8; col++) {
                 const square = document.createElement('div');
                 square.className = `square ${(row + col) % 2 === 0 ? 'white' : 'black'}`;
@@ -256,10 +273,15 @@ class ChessGame {
                 square.dataset.col = col;
                 
                 const piece = this.board[row][col];
-                if (piece) {
+                if (piece && piece.type && piece.color) {
                     const pieceElement = document.createElement('div');
                     pieceElement.className = 'piece';
-                    pieceElement.textContent = this.pieces[piece.color][piece.type];
+                    // 기물 타입과 색상이 유효한지 확인
+                    if (this.pieces[piece.color] && this.pieces[piece.color][piece.type]) {
+                        pieceElement.textContent = this.pieces[piece.color][piece.type];
+                    } else {
+                        console.warn('⚠️ 알 수 없는 기물:', piece);
+                    }
                     square.appendChild(pieceElement);
                 }
                 
@@ -631,9 +653,15 @@ class ChessGame {
         // 게임 상태 변경 리스너
         const gameListener = this.gameRef.on('value', (snapshot) => {
             const gameData = snapshot.val();
-            if (!gameData) return;
+            if (!gameData) {
+                console.log('⚠️ Firebase에서 빈 데이터 수신');
+                return;
+            }
             
             console.log('🔥 게임 상태 업데이트:', gameData);
+            console.log('📋 보드 데이터 타입:', typeof gameData.board);
+            console.log('📋 보드 데이터 길이:', gameData.board ? gameData.board.length : 'null');
+            console.log('📋 보드 데이터:', gameData.board);
             
             // 참가자 정보 업데이트
             if (gameData.guestId && !this.guestPlayerName) {
@@ -657,6 +685,8 @@ class ChessGame {
             // 보드 상태 동기화
             if (gameData.board) {
                 this.syncBoard(gameData.board);
+            } else {
+                console.log('⚠️ 보드 데이터가 없습니다');
             }
             
             // 현재 플레이어 동기화
@@ -678,12 +708,68 @@ class ChessGame {
     
     // 보드 동기화
     syncBoard(newBoard) {
+        console.log('🔄 보드 동기화 시도:', newBoard);
+        console.log('🔍 새 보드 타입:', typeof newBoard);
+        console.log('🔍 새 보드가 배열인가?', Array.isArray(newBoard));
+        
+        // null 또는 undefined 체크
+        if (!newBoard) {
+            console.error('❌ 새 보드 데이터가 null 또는 undefined');
+            return;
+        }
+        
+        // Firebase가 객체로 반환한 경우 배열로 변환
+        let processedBoard = newBoard;
+        if (!Array.isArray(newBoard) && typeof newBoard === 'object') {
+            console.log('🔄 객체를 배열로 변환 시도');
+            processedBoard = this.convertObjectToArray(newBoard);
+        }
+        
+        // 배열 유효성 검사
+        if (!Array.isArray(processedBoard) || processedBoard.length !== 8) {
+            console.error('❌ 유효하지 않은 새 보드 데이터:', processedBoard);
+            console.error('❌ 타입:', typeof processedBoard, '길이:', processedBoard ? processedBoard.length : 'null');
+            return;
+        }
+        
+        // 각 행 검사 및 변환
+        for (let i = 0; i < 8; i++) {
+            if (!processedBoard[i]) {
+                console.error(`❌ 행 [${i}]이 null 또는 undefined`);
+                return;
+            }
+            
+            // 행이 객체인 경우 배열로 변환
+            if (!Array.isArray(processedBoard[i]) && typeof processedBoard[i] === 'object') {
+                console.log(`🔄 행 [${i}]을 객체에서 배열로 변환`);
+                processedBoard[i] = this.convertObjectToArray(processedBoard[i]);
+            }
+            
+            if (!Array.isArray(processedBoard[i]) || processedBoard[i].length !== 8) {
+                console.error(`❌ 유효하지 않은 새 보드 행 [${i}]:`, processedBoard[i]);
+                return;
+            }
+        }
+        
+        // 기존 보드가 없거나 유효하지 않으면 새 보드로 교체
+        if (!this.board || !Array.isArray(this.board) || this.board.length !== 8) {
+            console.log('🆕 초기 보드 설정');
+            this.board = processedBoard;
+            this.renderBoard();
+            return;
+        }
+        
         let hasChanges = false;
         
         for (let row = 0; row < 8; row++) {
+            if (!Array.isArray(this.board[row])) {
+                hasChanges = true;
+                break;
+            }
+            
             for (let col = 0; col < 8; col++) {
                 const currentPiece = this.board[row][col];
-                const newPiece = newBoard[row][col];
+                const newPiece = processedBoard[row][col];
                 
                 if (JSON.stringify(currentPiece) !== JSON.stringify(newPiece)) {
                     hasChanges = true;
@@ -694,10 +780,31 @@ class ChessGame {
         }
         
         if (hasChanges) {
-            console.log('🔄 보드 동기화');
-            this.board = newBoard;
+            console.log('🔄 보드 변경 감지 - 동기화 진행');
+            this.board = processedBoard;
             this.renderBoard();
         }
+    }
+    
+    // 객체를 배열로 변환하는 헬퍼 함수
+    convertObjectToArray(obj) {
+        if (!obj || typeof obj !== 'object') {
+            console.error('❌ 변환할 수 없는 객체:', obj);
+            return null;
+        }
+        
+        const arr = [];
+        const keys = Object.keys(obj).sort((a, b) => parseInt(a) - parseInt(b));
+        
+        for (const key of keys) {
+            const index = parseInt(key);
+            if (!isNaN(index)) {
+                arr[index] = obj[key];
+            }
+        }
+        
+        console.log('✅ 객체 → 배열 변환 완료:', arr);
+        return arr;
     }
     
     // 게임 시작 처리
