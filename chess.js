@@ -421,20 +421,44 @@ class ChessGame {
     }
 
     endGame(winner) {
-        console.log(`🎯 Game Over: ${winner} wins!`);
+        console.log(`🎯 게임 종료: ${winner} 승리!`);
+        
+        // 게임 상태 업데이트
         this.isGameInProgress = false;
         this.gameStarted = false;
         this.stopTurnTimer();
+        
+        // UI 업데이트
         const gameStatus = document.getElementById('gameStatus');
-        const winnerText = winner === 'white' ? 'White' : 'Black';
-        gameStatus.textContent = `🎉 Game Over! ${winnerText} wins! 🎉`;
+        const winnerText = winner === 'white' ? '백' : '흑';
+        gameStatus.textContent = `🎉 게임 종료! ${winnerText}의 승리! 🎉`;
         gameStatus.style.color = '#dc3545';
+        gameStatus.style.fontSize = '1.3rem';
+        gameStatus.style.fontWeight = 'bold';
+        
+        // 타이머 표시 숨기기
         const timerElement = document.getElementById('turnTimer');
-        if (timerElement) timerElement.style.display = 'none';
+        if (timerElement) {
+            timerElement.style.display = 'none';
+        }
+        
+        // 모든 말 선택 해제
         this.selectedSquare = null;
         this.clearHighlights();
+        
+        // 내가 승자인지 패자인지 확인
+        const myColor = this.isRoomHost ? 'white' : 'black';
+        const isWinner = winner === myColor;
+        
+        // 승리자와 패배자에게 다른 메시지 표시
         setTimeout(() => {
-            alert(`🎊 Congratulations! ${winnerText} has won the game! 🎊`);
+            if (isWinner) {
+                // 승리자 메시지
+                alert(`🎊 축하합니다! 승리하셨습니다! 🎊\n\n훌륭한 체스 실력이네요! 🏆`);
+            } else {
+                // 패배자 메시지 (격려)
+                alert(`😊 수고하셨습니다! 🎯\n\n다시 도전해보세요! 다음엔 더 잘하실 거예요! 💪\n화이팅! 🌟`);
+            }
         }, 500);
     }
     
