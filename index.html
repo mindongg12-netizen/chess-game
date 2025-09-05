@@ -100,43 +100,6 @@
         </div>
     </div>
     
-    <!-- Firebase SDK 초기화 -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
-        
-        // Firebase 설정
-        const firebaseConfig = {
-            apiKey: "AIzaSyBnpdg6qIjdJb7p9lroLalSjCnpOLxoo20",
-            authDomain: "chess-game-d754b.firebaseapp.com",
-            databaseURL: "https://chess-game-d754b-default-rtdb.asia-southeast1.firebasedatabase.app/",
-            projectId: "chess-game-d754b",
-            storageBucket: "chess-game-d754b.firebasestorage.app",
-            messagingSenderId: "537203012154",
-            appId: "1:537203012154:web:d1d9c46b71e1eb2a7bf63e"
-        };
-        
-        // Firebase 초기화
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-        
-        // 전역에서 접근 가능하도록 설정
-        window.firebase = { 
-            database,
-            app
-        };
-        
-        console.log('🔥 Firebase 초기화 완료');
-        
-        // chess.js가 로드된 후 게임 시작
-        window.addEventListener('load', () => {
-            if (window.ChessGame) {
-                new window.ChessGame();
-            }
-        });
-    </script>
-    
-    <!-- 게임 로직 (일반 스크립트) -->
-    <script src="chess.js"></script>
+    <script type="module" src="chess.js"></script>
 </body>
 </html>
