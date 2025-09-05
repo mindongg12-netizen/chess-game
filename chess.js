@@ -5,148 +5,104 @@ class ChessGame {
         this.selectedSquare = null;
         this.gameStarted = false;
         this.capturedPieces = { white: [], black: [] };
-        
-        // 타이머 관련 속성
-        this.turnTimeLimit = 40; // 40초 제한
+
+        // Timer properties
+        this.turnTimeLimit = 40; // 40 seconds limit
         this.currentTurnTime = this.turnTimeLimit;
         this.timerInterval = null;
-        
-        // 온라인 게임 관련 속성
+
+        // Online game properties
         this.gameCode = null;
         this.isOnlineGame = false;
         this.isRoomCreated = false;
         this.isGameInProgress = false;
         this.isRoomHost = false;
         this.isRoomGuest = false;
-        this.isMovePending = false; // 이동 처리 중 플래그
-        
-        // 플레이어 이름
+        // Flag to prevent moves while one is being processed
+        this.isMovePending = false; 
+
+        // Player names
         this.hostPlayerName = '';
         this.guestPlayerName = '';
-        
-        // Firebase 실시간 통신
-        this.database = null; // Firebase 로딩 후 설정
+
+        // Firebase real-time communication
+        this.database = null; // Set after Firebase loads
         this.playerId = this.generatePlayerId();
         this.gameRef = null;
         this.listeners = [];
-        
-        // 체스 기물 유니코드
+
+        // Unicode chess pieces
         this.pieces = {
             white: {
-                king: '♔',
-                queen: '♕',
-                rook: '♖',
-                bishop: '♗',
-                knight: '♘',
-                pawn: '♙'
+                king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙'
             },
             black: {
-                king: '♚',
-                queen: '♛',
-                rook: '♜',
-                bishop: '♝',
-                knight: '♞',
-                pawn: '♟'
+                king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟'
             }
         };
-        
-        console.log('🔥 Firebase 체스게임 초기화 시작');
-        console.log('🆔 플레이어 ID:', this.playerId);
-        
+
+        console.log('🔥 Firebase Chess Game Initialization Started');
+        console.log('🆔 Player ID:', this.playerId);
+
         this.initializeEventListeners();
         this.waitForFirebase();
     }
-    
+
     initializeEventListeners() {
-        document.getElementById('startGameBtn').addEventListener('click', () => {
-            this.startGame();
-        });
-        
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            this.resetGameOnline();
-        });
-        
-        document.getElementById('backToMenuBtn').addEventListener('click', () => {
-            this.backToMenu();
-        });
-        
-        document.getElementById('copyCodeBtn').addEventListener('click', () => {
-            this.copyGameCode();
-        });
-        
-        document.getElementById('startGameBtnInRoom').addEventListener('click', () => {
-            this.startActualGame();
-        });
-        
-        document.getElementById('joinRoomBtn').addEventListener('click', () => {
-            this.joinRoom();
-        });
-        
-        // 코드 입력 필드에서 Enter 키 처리
+        document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
+        document.getElementById('resetBtn').addEventListener('click', () => this.resetGameOnline());
+        document.getElementById('backToMenuBtn').addEventListener('click', () => this.backToMenu());
+        document.getElementById('copyCodeBtn').addEventListener('click', () => this.copyGameCode());
+        document.getElementById('startGameBtnInRoom').addEventListener('click', () => this.startActualGame());
+        document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
         document.getElementById('roomCodeInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.joinRoom();
-            }
+            if (e.key === 'Enter') this.joinRoom();
         });
-        
-        // 숫자만 입력 가능하도록 처리
         document.getElementById('roomCodeInput').addEventListener('input', (e) => {
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
         });
     }
-    
-    // Firebase 준비 대기
+
     waitForFirebase() {
         if (window.firebaseReady && window.database) {
             this.database = window.database;
-            console.log('🔥 Firebase 연결 완료');
+            console.log('🔥 Firebase Connection Complete');
         } else {
-            console.log('⏳ Firebase 로딩 대기 중...');
+            console.log('⏳ Waiting for Firebase to load...');
             document.addEventListener('firebaseReady', () => {
                 this.database = window.database;
-                console.log('🔥 Firebase 연결 완료 (이벤트)');
+                console.log('🔥 Firebase Connection Complete (Event)');
             });
         }
     }
-    
+
     async startGame() {
-        // 이름 입력 검증
         const hostNameInput = document.getElementById('hostNameInput');
         const hostName = hostNameInput.value.trim();
-        
         if (!hostName) {
-            this.showNameError(hostNameInput, '이름을 입력해주세요');
+            this.showNameError(hostNameInput, 'Please enter your name');
             return;
         }
-        
         if (hostName.length < 2) {
-            this.showNameError(hostNameInput, '2글자 이상 입력해주세요');
+            this.showNameError(hostNameInput, 'Please enter at least 2 characters');
             return;
         }
-        
-        console.log('🔥 Firebase 방 생성 시작 - 방장:', hostName);
-        
-        // Firebase 연결 확인
+        console.log('🔥 Starting Firebase room creation - Host:', hostName);
         if (!this.database) {
-            alert('Firebase 연결을 기다리는 중입니다. 잠시 후 다시 시도해주세요.');
+            alert('Waiting for Firebase connection. Please try again in a moment.');
             return;
         }
-        
         try {
-            // 5자리 랜덤 코드 생성
             this.gameCode = this.generateRoomCode();
             this.hostPlayerName = hostName;
             this.isRoomHost = true;
             this.isRoomGuest = false;
             this.isOnlineGame = true;
-            
-            console.log('🏠 Firebase 방장 설정 완료');
-            console.log('- 내가 방장:', this.isRoomHost);
-            console.log('- 내가 참가자:', this.isRoomGuest);
-            console.log('- 내 색깔: white (방장)');
-            console.log('- 시작 턴:', 'white');
-            
-            // Firebase에 방 생성
+            console.log('🏠 Firebase Host setup complete');
+            console.log('- Is Host:', this.isRoomHost);
+            console.log('- Is Guest:', this.isRoomGuest);
+            console.log('- My color: white (Host)');
+            console.log('- Starting turn:', 'white');
             const roomData = {
                 hostId: this.playerId,
                 hostName: hostName,
@@ -158,45 +114,32 @@ class ChessGame {
                 capturedPieces: { white: [], black: [] },
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             };
-            
             this.gameRef = this.database.ref('games/' + this.gameCode);
             await this.gameRef.set(roomData);
-            
-            console.log('✅ Firebase 방 생성 완료:', this.gameCode);
-            
-            // UI 전환
+            console.log('✅ Firebase room created:', this.gameCode);
             document.getElementById('gameMenu').style.display = 'none';
             document.getElementById('gameContainer').style.display = 'block';
-            
             this.showGameCode();
             this.initializeBoard();
             this.renderBoard();
             this.showWaitingState();
             this.updatePlayerNames();
-            
-            // Firebase 리스너 설정
             this.setupFirebaseListeners();
-            
         } catch (error) {
-            console.error('❌ 방 생성 실패:', error);
-            alert('방 생성에 실패했습니다: ' + error.message);
+            console.error('❌ Failed to create room:', error);
+            alert('Failed to create room: ' + error.message);
         }
     }
-    
-    // 온라인 게임 재시작 (Firebase 동기화)
+
     async resetGameOnline() {
         if (!this.gameRef || !this.isOnlineGame) {
-            console.log('⚠️ 온라인 게임이 아님 - 로컬 재시작');
+            console.log('⚠️ Not an online game - resetting locally');
             this.resetGame();
             return;
         }
-
-        console.log('🔄 온라인 게임 재시작 요청');
-        
+        console.log('🔄 Requesting online game restart');
         try {
-            // Firebase에 게임 재시작 신호 전송
             const initialBoard = this.getInitialBoard();
-            
             await this.gameRef.update({
                 board: initialBoard,
                 currentPlayer: 'white',
@@ -208,16 +151,13 @@ class ChessGame {
                 gameRestarted: firebase.database.ServerValue.TIMESTAMP,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
-            
-            console.log('✅ 게임 재시작 신호 Firebase 전송 완료');
-            
+            console.log('✅ Game restart signal sent to Firebase');
         } catch (error) {
-            console.error('❌ 게임 재시작 실패:', error);
-            alert('게임 재시작에 실패했습니다: ' + error.message);
+            console.error('❌ Game restart failed:', error);
+            alert('Failed to restart game: ' + error.message);
         }
     }
 
-    // 로컬 게임 재시작 (기존 함수)
     resetGame() {
         this.stopTurnTimer();
         this.currentPlayer = 'white';
@@ -229,7 +169,7 @@ class ChessGame {
         this.renderBoard();
         this.showWaitingState();
     }
-    
+
     backToMenu() {
         this.stopTurnTimer();
         this.hideGameCode();
@@ -248,188 +188,120 @@ class ChessGame {
         this.hostPlayerName = '';
         this.guestPlayerName = '';
     }
-    
+
     initializeBoard() {
-        // 8x8 체스보드 초기화
         this.board = Array(8).fill(null).map(() => Array(8).fill(null));
-        
-        // 백 기물 배치
         this.board[7] = [
-            { type: 'rook', color: 'white' },
-            { type: 'knight', color: 'white' },
-            { type: 'bishop', color: 'white' },
-            { type: 'queen', color: 'white' },
-            { type: 'king', color: 'white' },
-            { type: 'bishop', color: 'white' },
-            { type: 'knight', color: 'white' },
-            { type: 'rook', color: 'white' }
+            { type: 'rook', color: 'white' }, { type: 'knight', color: 'white' },
+            { type: 'bishop', color: 'white' }, { type: 'queen', color: 'white' },
+            { type: 'king', color: 'white' }, { type: 'bishop', color: 'white' },
+            { type: 'knight', color: 'white' }, { type: 'rook', color: 'white' }
         ];
-        
-        for (let i = 0; i < 8; i++) {
-            this.board[6][i] = { type: 'pawn', color: 'white' };
-        }
-        
-        // 흑 기물 배치
+        for (let i = 0; i < 8; i++) this.board[6][i] = { type: 'pawn', color: 'white' };
         this.board[0] = [
-            { type: 'rook', color: 'black' },
-            { type: 'knight', color: 'black' },
-            { type: 'bishop', color: 'black' },
-            { type: 'queen', color: 'black' },
-            { type: 'king', color: 'black' },
-            { type: 'bishop', color: 'black' },
-            { type: 'knight', color: 'black' },
-            { type: 'rook', color: 'black' }
+            { type: 'rook', color: 'black' }, { type: 'knight', color: 'black' },
+            { type: 'bishop', color: 'black' }, { type: 'queen', color: 'black' },
+            { type: 'king', color: 'black' }, { type: 'bishop', color: 'black' },
+            { type: 'knight', color: 'black' }, { type: 'rook', color: 'black' }
         ];
-        
-        for (let i = 0; i < 8; i++) {
-            this.board[1][i] = { type: 'pawn', color: 'black' };
-        }
+        for (let i = 0; i < 8; i++) this.board[1][i] = { type: 'pawn', color: 'black' };
     }
-    
+
     renderBoard() {
         const boardElement = document.getElementById('chessboard');
         if (!boardElement) {
-            console.error('❌ chessboard 요소를 찾을 수 없습니다');
+            console.error('❌ chessboard element not found');
             return;
         }
-        
-        // 보드 배열 유효성 검사
         if (!this.board || !Array.isArray(this.board) || this.board.length !== 8) {
-            console.error('❌ 유효하지 않은 보드 데이터:', this.board);
+            console.error('❌ Invalid board data:', this.board);
             return;
         }
-        
         boardElement.innerHTML = '';
-        
         for (let row = 0; row < 8; row++) {
-            // 행 배열 유효성 검사
             if (!this.board[row] || !Array.isArray(this.board[row]) || this.board[row].length !== 8) {
-                console.error(`❌ 유효하지 않은 행 데이터 [${row}]:`, this.board[row]);
+                console.error(`❌ Invalid row data [${row}]:`, this.board[row]);
                 return;
             }
-            
             for (let col = 0; col < 8; col++) {
                 const square = document.createElement('div');
                 square.className = `square ${(row + col) % 2 === 0 ? 'white' : 'black'}`;
                 square.dataset.row = row;
                 square.dataset.col = col;
-                
                 const piece = this.board[row][col];
                 if (piece && piece.type && piece.color) {
                     const pieceElement = document.createElement('div');
                     pieceElement.className = 'piece';
-                    // 기물 타입과 색상이 유효한지 확인
                     if (this.pieces[piece.color] && this.pieces[piece.color][piece.type]) {
                         pieceElement.textContent = this.pieces[piece.color][piece.type];
                     } else {
-                        console.warn('⚠️ 알 수 없는 기물:', piece);
+                        console.warn('⚠️ Unknown piece:', piece);
                     }
                     square.appendChild(pieceElement);
                 }
-                
-                square.addEventListener('click', () => {
-                    this.handleSquareClick(row, col);
-                });
-                
+                square.addEventListener('click', () => this.handleSquareClick(row, col));
                 boardElement.appendChild(square);
             }
         }
-        
         this.updateCapturedPieces();
     }
-    
+
     async handleSquareClick(row, col) {
         if (!this.gameStarted || !this.isGameInProgress) {
-            console.log('⚠️ 게임이 시작되지 않음 또는 진행중이 아님');
+            console.log('⚠️ Game not started or not in progress.');
             return;
         }
-        
-        // 이동 처리 중인지 확인
+        // *** FIX: Block any new move if one is already being processed.
         if (this.isMovePending) {
-            console.log('⚠️ 이동 처리 중 - 추가 이동 차단');
+            console.log('⚠️ A move is already being processed. Please wait.');
             return;
         }
         
-        console.log('🖱️ 클릭된 위치:', `(${row},${col})`);
-        console.log('🎯 현재 턴:', this.currentPlayer);
-        console.log('🏠 내가 방장:', this.isRoomHost);
-        console.log('🚪 내가 참가자:', this.isRoomGuest);
-        console.log('🎮 게임 진행 상태:', this.isGameInProgress);
-        console.log('🔄 온라인 게임:', this.isOnlineGame);
+        console.log(`🖱️ Clicked on: (${row},${col})`);
         
-        // 플레이어 권한 체크 - 더 엄격하게
+        // *** FIX: Stricter turn checking at the very beginning.
         const myColor = this.isRoomHost ? 'white' : 'black';
-        console.log('🎨 내 색깔:', myColor);
-        console.log('🎯 현재 차례:', this.currentPlayer);
-        console.log('🔍 턴 체크:', `${this.currentPlayer} === ${myColor} ? ${this.currentPlayer === myColor}`);
-        
         if (this.currentPlayer !== myColor) {
-            console.warn('❌ 권한 없음 - 내 차례가 아닙니다!');
-            console.warn(`   현재 턴: ${this.currentPlayer}`);
-            console.warn(`   내 색깔: ${myColor}`);
-            console.warn(`   방장 여부: ${this.isRoomHost}`);
-            console.warn(`   참가자 여부: ${this.isRoomGuest}`);
-            
-            // 사용자에게 알림
-            const currentPlayerText = this.currentPlayer === 'white' ? '백' : '흑';
-            alert(`⚠️ ${currentPlayerText}의 차례입니다! 상대방의 턴을 기다려주세요.`);
+            console.warn(`❌ Not your turn! Current turn: ${this.currentPlayer}, Your color: ${myColor}`);
+            alert("It's the opponent's turn. Please wait.");
             return;
         }
         
-        console.log('✅ 권한 확인 완료 - 내 차례입니다');
+        console.log('✅ Authority check passed - It is your turn.');
         
         const piece = this.board[row][col];
-        console.log('♟️ 클릭된 기물:', piece);
         
-        // 기물을 선택하지 않은 상태에서 클릭
         if (!this.selectedSquare) {
             if (piece && piece.color === this.currentPlayer) {
-                console.log('✅ 기물 선택:', piece);
                 this.selectedSquare = { row, col };
                 this.highlightValidMoves(row, col);
-            } else {
-                console.log('⚠️ 선택할 수 없는 기물');
             }
         } else {
-            // 이미 기물을 선택한 상태에서 클릭
             if (this.selectedSquare.row === row && this.selectedSquare.col === col) {
-                // 같은 칸을 다시 클릭 (선택 해제)
-                console.log('❌ 기물 선택 해제');
                 this.selectedSquare = null;
                 this.clearHighlights();
             } else if (piece && piece.color === this.currentPlayer) {
-                // 같은 색 기물을 클릭 (다른 기물 선택)
-                console.log('🔄 다른 기물 선택:', piece);
                 this.selectedSquare = { row, col };
                 this.clearHighlights();
                 this.highlightValidMoves(row, col);
             } else {
-                // 이동 시도
-                console.log('🎯 이동 시도:', `(${this.selectedSquare.row},${this.selectedSquare.col}) → (${row},${col})`);
                 if (this.isValidMove(this.selectedSquare.row, this.selectedSquare.col, row, col)) {
-                    console.log('✅ 유효한 이동');
                     await this.makeMove(this.selectedSquare.row, this.selectedSquare.col, row, col);
                     this.selectedSquare = null;
                     this.clearHighlights();
-                    this.switchPlayer();
-                    this.updateGameStatus();
+                    // Do not switch player here for online games, wait for Firebase listener
                 } else {
-                    console.log('❌ 유효하지 않은 이동');
                     this.selectedSquare = null;
                     this.clearHighlights();
                 }
             }
         }
     }
-    
+
     highlightValidMoves(row, col) {
         this.clearHighlights();
-        
-        // 선택된 칸 하이라이트
         const selectedSquare = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
         selectedSquare.classList.add('selected');
-        
-        // 유효한 이동 칸들 하이라이트
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
                 if (this.isValidMove(row, col, r, c)) {
@@ -443,925 +315,515 @@ class ChessGame {
             }
         }
     }
-    
+
     clearHighlights() {
         document.querySelectorAll('.square').forEach(square => {
             square.classList.remove('selected', 'valid-move', 'capture');
         });
     }
-    
+
     isValidMove(fromRow, fromCol, toRow, toCol) {
-        // 기본적인 유효성 검사
         if (toRow < 0 || toRow >= 8 || toCol < 0 || toCol >= 8) return false;
         if (fromRow === toRow && fromCol === toCol) return false;
-        
         const piece = this.board[fromRow][fromCol];
         const targetPiece = this.board[toRow][toCol];
-        
         if (!piece) return false;
         if (targetPiece && targetPiece.color === piece.color) return false;
-        
-        // 기물별 이동 규칙 (기본적인 구현)
         const rowDiff = Math.abs(toRow - fromRow);
         const colDiff = Math.abs(toCol - fromCol);
-        
         switch (piece.type) {
-            case 'pawn':
-                return this.isValidPawnMove(fromRow, fromCol, toRow, toCol, piece.color);
-            case 'rook':
-                return (rowDiff === 0 || colDiff === 0) && this.isPathClear(fromRow, fromCol, toRow, toCol);
-            case 'bishop':
-                return rowDiff === colDiff && this.isPathClear(fromRow, fromCol, toRow, toCol);
-            case 'queen':
-                return (rowDiff === 0 || colDiff === 0 || rowDiff === colDiff) && 
-                       this.isPathClear(fromRow, fromCol, toRow, toCol);
-            case 'king':
-                return rowDiff <= 1 && colDiff <= 1;
-            case 'knight':
-                return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
-            default:
-                return false;
+            case 'pawn': return this.isValidPawnMove(fromRow, fromCol, toRow, toCol, piece.color);
+            case 'rook': return (rowDiff === 0 || colDiff === 0) && this.isPathClear(fromRow, fromCol, toRow, toCol);
+            case 'bishop': return rowDiff === colDiff && this.isPathClear(fromRow, fromCol, toRow, toCol);
+            case 'queen': return (rowDiff === 0 || colDiff === 0 || rowDiff === colDiff) && this.isPathClear(fromRow, fromCol, toRow, toCol);
+            case 'king': return rowDiff <= 1 && colDiff <= 1;
+            case 'knight': return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+            default: return false;
         }
     }
-    
+
     isValidPawnMove(fromRow, fromCol, toRow, toCol, color) {
         const direction = color === 'white' ? -1 : 1;
         const startRow = color === 'white' ? 6 : 1;
         const rowDiff = toRow - fromRow;
-        const colDiff = Math.abs(toCol - fromCol);
-        
-        // 전진
         if (fromCol === toCol && !this.board[toRow][toCol]) {
             if (rowDiff === direction) return true;
-            if (fromRow === startRow && rowDiff === 2 * direction) return true;
+            if (fromRow === startRow && rowDiff === 2 * direction && this.isPathClear(fromRow, fromCol, toRow, toCol)) return true;
         }
-        
-        // 대각선 공격
-        if (colDiff === 1 && rowDiff === direction && this.board[toRow][toCol]) {
+        if (Math.abs(toCol - fromCol) === 1 && rowDiff === direction && this.board[toRow][toCol]) {
             return true;
         }
-        
         return false;
     }
-    
+
     isPathClear(fromRow, fromCol, toRow, toCol) {
-        const rowStep = toRow > fromRow ? 1 : toRow < fromRow ? -1 : 0;
-        const colStep = toCol > fromCol ? 1 : toCol < fromCol ? -1 : 0;
-        
+        const rowStep = Math.sign(toRow - fromRow);
+        const colStep = Math.sign(toCol - fromCol);
         let currentRow = fromRow + rowStep;
         let currentCol = fromCol + colStep;
-        
         while (currentRow !== toRow || currentCol !== toCol) {
             if (this.board[currentRow][currentCol]) return false;
             currentRow += rowStep;
             currentCol += colStep;
         }
-        
         return true;
     }
-    
+
     async makeMove(fromRow, fromCol, toRow, toCol) {
-        // 최종 권한 체크 (이중 보안)
-        const myColor = this.isRoomHost ? 'white' : 'black';
-        if (this.currentPlayer !== myColor) {
-            console.error('❌ makeMove 권한 체크 실패!');
-            console.error(`   현재 턴: ${this.currentPlayer}, 내 색깔: ${myColor}`);
-            alert('⚠️ 권한이 없습니다! 상대방의 턴입니다.');
-            return;
-        }
-        
-        // 이동 처리 시작
+        // *** FIX: Lock the board to prevent further moves
         this.isMovePending = true;
-        console.log('🔒 이동 처리 시작 - 추가 이동 차단');
-        console.log(`🎯 이동 실행: ${myColor} 플레이어의 턴`);
-        
+        console.log('🔒 Move initiated. Board is locked.');
+
         const piece = this.board[fromRow][fromCol];
         const capturedPiece = this.board[toRow][toCol];
-        
-        // 킹이 잡혔는지 확인
         let gameEnded = false;
         let winner = null;
-        
+
         if (capturedPiece) {
             this.capturedPieces[capturedPiece.color].push(capturedPiece);
-            
-            // 킹이 잡혔으면 게임 종료
             if (capturedPiece.type === 'king') {
                 gameEnded = true;
-                winner = piece.color; // 킹을 잡은 플레이어가 승리
-                console.log(`👑 ${capturedPiece.color} 킹이 잡혔습니다! ${winner} 승리!`);
+                winner = piece.color;
             }
         }
-        
         this.board[toRow][toCol] = piece;
         this.board[fromRow][fromCol] = null;
         
-        // Firebase로 이동 전송
-        if (this.gameRef && this.isOnlineGame && this.isGameInProgress) {
-            console.log('🔥 Firebase 이동 전송:', `(${fromRow},${fromCol}) → (${toRow},${toCol})`);
-            
+        // This is a local render for immediate feedback
+        this.renderBoard();
+        
+        if (this.gameRef && this.isOnlineGame) {
+            console.log('🔥 Sending move to Firebase...');
             try {
                 const updateData = {
                     board: this.board,
                     capturedPieces: this.capturedPieces,
                     lastActivity: firebase.database.ServerValue.TIMESTAMP
                 };
-                
                 if (gameEnded) {
-                    // 게임이 끝났으면 종료 정보 추가
                     updateData.gameEnded = true;
                     updateData.winner = winner;
-                    updateData.gameStarted = false; // 게임 진행 중단
-                    console.log('🏆 게임 종료 정보 Firebase 전송:', { winner, gameEnded });
+                    updateData.isGameInProgress = false; 
                 } else {
-                    // 게임이 계속되면 다음 플레이어로 변경
-                    const nextPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-                    updateData.currentPlayer = nextPlayer;
+                    updateData.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
                 }
-                
-                // Firebase 업데이트
                 await this.gameRef.update(updateData);
-                
+                console.log('✅ Move successfully sent to Firebase.');
             } catch (error) {
-                console.error('❌ 이동 전송 실패:', error);
-                // 오류 발생 시에도 플래그 해제
+                console.error('❌ Failed to send move:', error);
+                // *** FIX: Unlock board on failure
                 this.isMovePending = false;
-                console.log('🔓 이동 실패 - 이동 차단 해제');
-                return;
+                console.log('🔓 Board unlocked due to error.');
+                alert('An error occurred while sending your move. Please try again.');
+                // Revert move locally? (optional, depends on desired UX)
             }
         }
-        
-        // 게임이 끝났으면 로컬에서도 처리
-        if (gameEnded) {
-            this.endGame(winner);
-        } else {
-            // 게임이 계속되면 로컬에서도 플레이어 변경
-            if (!this.isOnlineGame || !this.gameRef) {
-                // 오프라인 게임인 경우 로컬에서 플레이어 변경
-                this.switchPlayer();
-            }
-            // 온라인 게임인 경우 Firebase 리스너를 통해 자동으로 동기화됨
-        }
-        
-        this.renderBoard();
-        
-        // 이동 처리 완료 - 플래그 해제는 Firebase 리스너에서 처리
-        console.log('✅ 이동 처리 완료 - Firebase 응답 대기 중');
-    }
-    
-    // 게임 종료 처리
-    endGame(winner) {
-        console.log(`🎯 게임 종료: ${winner} 승리!`);
-        
-        // 게임 상태 업데이트
-        this.isGameInProgress = false;
-        this.gameStarted = false;
-        
-        // 타이머 정지
-        this.stopTurnTimer();
-        
-        // UI 업데이트
-        const gameStatus = document.getElementById('gameStatus');
-        const winnerText = winner === 'white' ? '백' : '흑';
-        gameStatus.textContent = `🎉 게임 종료! ${winnerText}의 승리! 🎉`;
-        gameStatus.style.color = '#dc3545';
-        gameStatus.style.fontSize = '1.3rem';
-        gameStatus.style.fontWeight = 'bold';
-        
-        // 타이머 표시 숨기기
-        const timerElement = document.getElementById('turnTimer');
-        if (timerElement) {
-            timerElement.style.display = 'none';
-        }
-        
-        // 모든 말 선택 해제
-        this.selectedSquare = null;
-        this.clearHighlights();
-        
-        // 축하 메시지 표시
-        setTimeout(() => {
-            alert(`🎊 축하합니다! ${winnerText}팀이 승리했습니다! 🎊\n\n상대방의 킹을 잡아 게임에서 이겼습니다!`);
-        }, 500);
     }
 
+    endGame(winner) {
+        console.log(`🎯 Game Over: ${winner} wins!`);
+        this.isGameInProgress = false;
+        this.gameStarted = false;
+        this.stopTurnTimer();
+        const gameStatus = document.getElementById('gameStatus');
+        const winnerText = winner === 'white' ? 'White' : 'Black';
+        gameStatus.textContent = `🎉 Game Over! ${winnerText} wins! 🎉`;
+        gameStatus.style.color = '#dc3545';
+        const timerElement = document.getElementById('turnTimer');
+        if (timerElement) timerElement.style.display = 'none';
+        this.selectedSquare = null;
+        this.clearHighlights();
+        setTimeout(() => {
+            alert(`🎊 Congratulations! ${winnerText} has won the game! 🎊`);
+        }, 500);
+    }
+    
     switchPlayer() {
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-        this.updateGameStatus();  // 턴 표시 업데이트 추가
+        this.updateGameStatus();
         this.resetTurnTimer();
     }
-    
+
     updateGameStatus() {
-        const playerText = this.currentPlayer === 'white' ? '백의 차례' : '흑의 차례';
-        console.log(`📝 게임 상태 업데이트: ${playerText} (현재 플레이어: ${this.currentPlayer})`);
-        
+        const playerText = this.currentPlayer === 'white' ? "White's Turn" : "Black's Turn";
         const currentPlayerElement = document.getElementById('currentPlayer');
-        if (currentPlayerElement) {
-            currentPlayerElement.textContent = playerText;
-            console.log('✅ UI 텍스트 업데이트 완료:', currentPlayerElement.textContent);
-        } else {
-            console.error('❌ currentPlayer 엘리먼트를 찾을 수 없음');
-        }
-        
+        if (currentPlayerElement) currentPlayerElement.textContent = playerText;
         const gameStatusElement = document.getElementById('gameStatus');
-        if (gameStatusElement) {
-            gameStatusElement.textContent = '게임이 진행 중입니다';
-        }
-        
+        if (gameStatusElement && this.isGameInProgress) gameStatusElement.textContent = 'Game in progress';
         this.updateTimerDisplay();
     }
-    
+
     updateCapturedPieces() {
         const capturedWhiteElement = document.getElementById('capturedWhite');
         const capturedBlackElement = document.getElementById('capturedBlack');
-        
-        // capturedPieces가 초기화되지 않은 경우 기본값 설정
-        if (!this.capturedPieces) {
-            console.warn('⚠️ capturedPieces가 undefined - 초기화');
-            this.capturedPieces = { white: [], black: [] };
-        }
-        
-        // white와 black 배열이 없는 경우 빈 배열로 초기화
-        if (!Array.isArray(this.capturedPieces.white)) {
-            console.warn('⚠️ capturedPieces.white가 배열이 아님 - 빈 배열로 초기화');
-            this.capturedPieces.white = [];
-        }
-        
-        if (!Array.isArray(this.capturedPieces.black)) {
-            console.warn('⚠️ capturedPieces.black가 배열이 아님 - 빈 배열로 초기화');
-            this.capturedPieces.black = [];
-        }
-        
-        capturedWhiteElement.innerHTML = this.capturedPieces.white
-            .map(piece => this.pieces.white[piece.type]).join(' ');
-        capturedBlackElement.innerHTML = this.capturedPieces.black
-            .map(piece => this.pieces.black[piece.type]).join(' ');
+        if (!this.capturedPieces) this.capturedPieces = { white: [], black: [] };
+        if (!Array.isArray(this.capturedPieces.white)) this.capturedPieces.white = [];
+        if (!Array.isArray(this.capturedPieces.black)) this.capturedPieces.black = [];
+        capturedWhiteElement.innerHTML = this.capturedPieces.white.map(p => this.pieces.white[p.type]).join(' ');
+        capturedBlackElement.innerHTML = this.capturedPieces.black.map(p => this.pieces.black[p.type]).join(' ');
     }
-    
-    // 타이머 관련 메서드들
+
     startTurnTimer() {
-        this.stopTurnTimer(); // 기존 타이머 정리
+        this.stopTurnTimer();
         this.currentTurnTime = this.turnTimeLimit;
         this.updateTimerDisplay();
-        
         this.timerInterval = setInterval(() => {
             this.currentTurnTime--;
             this.updateTimerDisplay();
-            
-            if (this.currentTurnTime <= 0) {
-                this.handleTimeOut();
-            }
+            if (this.currentTurnTime <= 0) this.handleTimeOut();
         }, 1000);
     }
-    
+
     stopTurnTimer() {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.timerInterval = null;
     }
-    
+
     resetTurnTimer() {
-        this.currentTurnTime = this.turnTimeLimit;
-        this.startTurnTimer();
+        this.stopTurnTimer(); // Stop any existing timer
+        if(this.isGameInProgress) {
+            this.startTurnTimer();
+        }
     }
     
     updateTimerDisplay() {
         const timerElement = document.getElementById('turnTimer');
         if (timerElement) {
             timerElement.textContent = this.currentTurnTime;
-            
-            // 5초 이하일 때 경고 스타일 적용
-            if (this.currentTurnTime <= 5) {
-                timerElement.classList.add('warning');
-            } else {
-                timerElement.classList.remove('warning');
-            }
+            timerElement.classList.toggle('warning', this.currentTurnTime <= 5);
         }
     }
     
     async handleTimeOut() {
         this.stopTurnTimer();
-        await this.makeRandomMove();
-        this.selectedSquare = null;
-        this.clearHighlights();
-        this.switchPlayer();
-        this.updateGameStatus();
+        const myColor = this.isRoomHost ? 'white' : 'black';
+        // Only the player whose turn it is should make a random move.
+        if (this.currentPlayer === myColor) {
+            alert('Time is up! A random move will be made for you.');
+            await this.makeRandomMove();
+        }
     }
-    
+
     async makeRandomMove() {
         const validMoves = this.getAllValidMoves(this.currentPlayer);
-        
         if (validMoves.length > 0) {
             const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
             await this.makeMove(randomMove.fromRow, randomMove.fromCol, randomMove.toRow, randomMove.toCol);
         }
     }
-    
+
     getAllValidMoves(player) {
-        const validMoves = [];
-        
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
-                const piece = this.board[row][col];
+        const moves = [];
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                const piece = this.board[r][c];
                 if (piece && piece.color === player) {
-                    for (let toRow = 0; toRow < 8; toRow++) {
-                        for (let toCol = 0; toCol < 8; toCol++) {
-                            if (this.isValidMove(row, col, toRow, toCol)) {
-                                validMoves.push({
-                                    fromRow: row,
-                                    fromCol: col,
-                                    toRow: toRow,
-                                    toCol: toCol
-                                });
+                    for (let tr = 0; tr < 8; tr++) {
+                        for (let tc = 0; tc < 8; tc++) {
+                            if (this.isValidMove(r, c, tr, tc)) {
+                                moves.push({ fromRow: r, fromCol: c, toRow: tr, toCol: tc });
                             }
                         }
                     }
                 }
             }
         }
-        
-        return validMoves;
+        return moves;
     }
-    
-    // Firebase 관련 메서드들
+
     generateRoomCode() {
         return Math.floor(10000 + Math.random() * 90000).toString();
     }
-    
-    // 초기 보드 상태 반환
+
     getInitialBoard() {
-        console.log('🆕 초기 보드 생성');
         const board = Array(8).fill(null).map(() => Array(8).fill(null));
-        
-        // 백 기물 배치
-        board[7] = [
-            { type: 'rook', color: 'white' },
-            { type: 'knight', color: 'white' },
-            { type: 'bishop', color: 'white' },
-            { type: 'queen', color: 'white' },
-            { type: 'king', color: 'white' },
-            { type: 'bishop', color: 'white' },
-            { type: 'knight', color: 'white' },
-            { type: 'rook', color: 'white' }
-        ];
-        
-        for (let i = 0; i < 8; i++) {
-            board[6][i] = { type: 'pawn', color: 'white' };
-        }
-        
-        // 흑 기물 배치
-        board[0] = [
-            { type: 'rook', color: 'black' },
-            { type: 'knight', color: 'black' },
-            { type: 'bishop', color: 'black' },
-            { type: 'queen', color: 'black' },
-            { type: 'king', color: 'black' },
-            { type: 'bishop', color: 'black' },
-            { type: 'knight', color: 'black' },
-            { type: 'rook', color: 'black' }
-        ];
-        
-        for (let i = 0; i < 8; i++) {
-            board[1][i] = { type: 'pawn', color: 'black' };
-        }
-        
+        board[7] = [ { type: 'rook', color: 'white' }, { type: 'knight', color: 'white' }, { type: 'bishop', color: 'white' }, { type: 'queen', color: 'white' }, { type: 'king', color: 'white' }, { type: 'bishop', color: 'white' }, { type: 'knight', color: 'white' }, { type: 'rook', color: 'white' } ];
+        for (let i = 0; i < 8; i++) board[6][i] = { type: 'pawn', color: 'white' };
+        board[0] = [ { type: 'rook', color: 'black' }, { type: 'knight', color: 'black' }, { type: 'bishop', color: 'black' }, { type: 'queen', color: 'black' }, { type: 'king', color: 'black' }, { type: 'bishop', color: 'black' }, { type: 'knight', color: 'black' }, { type: 'rook', color: 'black' } ];
+        for (let i = 0; i < 8; i++) board[1][i] = { type: 'pawn', color: 'black' };
         return board;
     }
-    
-    // Firebase 리스너 설정
+
     setupFirebaseListeners() {
         if (!this.gameRef) return;
-        
-        console.log('🔥 Firebase 리스너 설정');
-        
-        // 게임 상태 변경 리스너
+        console.log('🔥 Setting up Firebase listeners');
         const gameListener = this.gameRef.on('value', (snapshot) => {
             const gameData = snapshot.val();
             if (!gameData) {
-                console.log('⚠️ Firebase에서 빈 데이터 수신');
+                console.log('⚠️ Empty data received from Firebase. The room may have been deleted.');
+                alert('The game room is no longer available.');
+                this.backToMenu();
                 return;
             }
+            console.log('🔥 Game state update received:', gameData);
             
-            console.log('🔥 게임 상태 업데이트:', gameData);
-            console.log('📋 보드 데이터 타입:', typeof gameData.board);
-            console.log('📋 보드 데이터 길이:', gameData.board ? gameData.board.length : 'null');
-            console.log('🎯 Firebase currentPlayer:', gameData.currentPlayer);
-            console.log('🎯 로컬 currentPlayer:', this.currentPlayer);
-            console.log('🏠 내 방장 상태:', this.isRoomHost);
-            console.log('🚪 내 참가자 상태:', this.isRoomGuest);
-            
-            // 참가자 정보 업데이트
+            // Update player names
+            this.hostPlayerName = gameData.hostName || 'Host';
             if (gameData.guestId && !this.guestPlayerName) {
                 this.guestPlayerName = gameData.guestName;
-                this.updatePlayerNames();
-                
                 if (this.isRoomHost) {
-                    const statusElement = document.getElementById('gameStatus');
-                    if (statusElement) {
-                        statusElement.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
+                     const statusElement = document.getElementById('gameStatus');
+                     if (statusElement) {
+                        statusElement.textContent = 'Opponent has joined! Press Start Game.';
                         statusElement.style.color = '#28a745';
-                    }
+                     }
                 }
             }
-            
-            // 게임 시작 상태 업데이트
-            if (gameData.gameStarted && !this.isGameInProgress) {
-                this.handleGameStart();
-            }
-            
-            // 보드 상태 동기화
-            if (gameData.board) {
-                this.syncBoard(gameData.board);
-            } else {
-                console.log('⚠️ 보드 데이터가 없습니다');
-            }
-            
-            // 현재 플레이어 동기화
-            if (gameData.currentPlayer !== this.currentPlayer) {
-                console.log(`🔄 플레이어 변경: ${this.currentPlayer} → ${gameData.currentPlayer}`);
-                this.currentPlayer = gameData.currentPlayer;
-                this.updateGameStatus();
-                this.resetTurnTimer();
-                
-                // 플레이어가 변경되었으므로 이동 플래그 해제
-                if (this.isMovePending) {
-                    this.isMovePending = false;
-                    console.log('🔓 플레이어 변경 - 이동 차단 해제');
-                }
-                
-                console.log('✅ 턴 표시 업데이트 완료:', this.currentPlayer);
-            }
-            
-            // 잡힌 기물 동기화
+            this.updatePlayerNames();
+
+            // Sync board state
+            if (gameData.board) this.syncBoard(gameData.board);
+
+            // Sync captured pieces
             if (gameData.capturedPieces) {
-                console.log('🎯 잡힌 기물 동기화:', gameData.capturedPieces);
-                
-                // capturedPieces 데이터 검증 및 초기화
-                const validCapturedPieces = {
+                this.capturedPieces = {
                     white: Array.isArray(gameData.capturedPieces.white) ? gameData.capturedPieces.white : [],
                     black: Array.isArray(gameData.capturedPieces.black) ? gameData.capturedPieces.black : []
                 };
-                
-                this.capturedPieces = validCapturedPieces;
                 this.updateCapturedPieces();
-            } else if (!this.capturedPieces) {
-                // capturedPieces가 없는 경우 기본값으로 초기화
-                console.warn('⚠️ Firebase에서 capturedPieces 없음 - 기본값으로 초기화');
-                this.capturedPieces = { white: [], black: [] };
             }
-            
-            // 게임 종료 상태 확인
-            if (gameData.gameEnded && gameData.winner) {
-                console.log('🏆 게임 종료 신호 수신:', { winner: gameData.winner, gameEnded: gameData.gameEnded });
-                
-                // 아직 게임이 진행 중이라면 종료 처리
-                if (this.isGameInProgress) {
-                    this.endGame(gameData.winner);
-                }
+
+            // Sync current player and unlock board
+            if (gameData.currentPlayer !== this.currentPlayer) {
+                console.log(`🔄 Turn changed via Firebase: ${this.currentPlayer} -> ${gameData.currentPlayer}`);
+                this.currentPlayer = gameData.currentPlayer;
+                this.updateGameStatus();
+                this.resetTurnTimer();
             }
+            // *** FIX: Unlock the board after any state update that changes the turn
+            this.isMovePending = false;
+            console.log('🔓 Board unlocked after state sync.');
             
-            // 게임 재시작 신호 확인
+            // Handle game start
+            if (gameData.gameStarted && !this.isGameInProgress) {
+                this.handleGameStart();
+            }
+
+            // Handle game end
+            if (gameData.gameEnded && this.isGameInProgress) {
+                this.endGame(gameData.winner);
+            }
+
+            // Handle game restart
             if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
-                console.log('🔄 게임 재시작 신호 수신:', gameData.gameRestarted);
-                
-                // 현재 게임이 종료되었거나 진행중이지 않은 상태라면 재시작 처리
-                if (!this.isGameInProgress || !this.gameStarted) {
-                    this.handleGameRestart(gameData);
+                if(!this.isGameInProgress || !this.gameStarted) {
+                   this.handleGameRestart(gameData);
                 }
             }
         });
-        
         this.listeners.push({ ref: this.gameRef, listener: gameListener });
     }
-    
-    // 보드 동기화
+
     syncBoard(newBoard) {
-        console.log('🔄 보드 동기화 시도:', newBoard);
-        console.log('🔍 새 보드 타입:', typeof newBoard);
-        console.log('🔍 새 보드가 배열인가?', Array.isArray(newBoard));
-        
-        // null 또는 undefined 체크
         if (!newBoard) {
-            console.error('❌ 새 보드 데이터가 null 또는 undefined');
+            console.error('❌ New board data is null or undefined');
             return;
         }
-        
-        // Firebase가 객체로 반환한 경우 배열로 변환
-        let processedBoard = newBoard;
-        if (!Array.isArray(newBoard) && typeof newBoard === 'object') {
-            console.log('🔄 객체를 배열로 변환 시도');
-            processedBoard = this.convertObjectToArray(newBoard);
-        }
-        
-        // 배열 유효성 검사
-        if (!Array.isArray(processedBoard) || processedBoard.length !== 8) {
-            console.error('❌ 유효하지 않은 새 보드 데이터:', processedBoard);
-            console.error('❌ 타입:', typeof processedBoard, '길이:', processedBoard ? processedBoard.length : 'null');
-            return;
-        }
-        
-        // 각 행 검사 및 변환
+        let processedBoard = Array.isArray(newBoard) ? newBoard : this.convertObjectToArray(newBoard);
         for (let i = 0; i < 8; i++) {
-            if (!processedBoard[i]) {
-                console.warn(`⚠️ 행 [${i}]이 null 또는 undefined - 빈 행으로 초기화`);
-                // 빈 행을 8개의 null로 채워진 배열로 초기화
-                processedBoard[i] = new Array(8).fill(null);
-            }
-            
-            // 행이 객체인 경우 배열로 변환
-            else if (!Array.isArray(processedBoard[i]) && typeof processedBoard[i] === 'object') {
-                console.log(`🔄 행 [${i}]을 객체에서 배열로 변환`);
-                processedBoard[i] = this.convertObjectToArray(processedBoard[i]);
-                
-                // 변환 후에도 유효하지 않으면 빈 행으로 초기화
-                if (!Array.isArray(processedBoard[i])) {
-                    console.warn(`⚠️ 행 [${i}] 변환 실패 - 빈 행으로 초기화`);
-                    processedBoard[i] = new Array(8).fill(null);
-                }
-            }
-            
-            // 배열이지만 길이가 8이 아닌 경우 보정
-            if (Array.isArray(processedBoard[i])) {
-                if (processedBoard[i].length < 8) {
-                    console.warn(`⚠️ 행 [${i}] 길이 부족 (${processedBoard[i].length}) - null로 채움`);
-                    while (processedBoard[i].length < 8) {
-                        processedBoard[i].push(null);
-                    }
-                } else if (processedBoard[i].length > 8) {
-                    console.warn(`⚠️ 행 [${i}] 길이 초과 (${processedBoard[i].length}) - 8개로 자름`);
-                    processedBoard[i] = processedBoard[i].slice(0, 8);
-                }
-            } else {
-                console.error(`❌ 행 [${i}]이 여전히 배열이 아님:`, processedBoard[i]);
-                processedBoard[i] = new Array(8).fill(null);
-            }
+             if (!processedBoard[i]) processedBoard[i] = new Array(8).fill(null);
+             else if (!Array.isArray(processedBoard[i])) processedBoard[i] = this.convertObjectToArray(processedBoard[i]);
         }
-        
-        // 기존 보드가 없거나 유효하지 않으면 새 보드로 교체
-        if (!this.board || !Array.isArray(this.board) || this.board.length !== 8) {
-            console.log('🆕 초기 보드 설정');
-            this.board = processedBoard;
-            this.renderBoard();
-            return;
-        }
-        
-        let hasChanges = false;
-        
-        for (let row = 0; row < 8; row++) {
-            if (!Array.isArray(this.board[row])) {
-                hasChanges = true;
-                break;
-            }
-            
-            for (let col = 0; col < 8; col++) {
-                const currentPiece = this.board[row][col];
-                const newPiece = processedBoard[row][col];
-                
-                if (JSON.stringify(currentPiece) !== JSON.stringify(newPiece)) {
-                    hasChanges = true;
-                    break;
-                }
-            }
-            if (hasChanges) break;
-        }
-        
-        if (hasChanges) {
-            console.log('🔄 보드 변경 감지 - 동기화 진행');
-            this.board = processedBoard;
-            this.renderBoard();
-        }
+        this.board = processedBoard;
+        this.renderBoard();
     }
     
-    // 객체를 배열로 변환하는 헬퍼 함수
     convertObjectToArray(obj, expectedLength = 8) {
-        if (!obj || typeof obj !== 'object') {
-            console.error('❌ 변환할 수 없는 객체:', obj);
-            return new Array(expectedLength).fill(null);
-        }
-        
+        if (!obj || typeof obj !== 'object') return new Array(expectedLength).fill(null);
         const arr = new Array(expectedLength).fill(null);
-        const keys = Object.keys(obj);
-        
-        for (const key of keys) {
+        Object.keys(obj).forEach(key => {
             const index = parseInt(key);
-            if (!isNaN(index) && index >= 0 && index < expectedLength) {
-                arr[index] = obj[key];
-            }
-        }
-        
-        console.log('✅ 객체 → 배열 변환 완료:', arr);
+            if (!isNaN(index) && index >= 0 && index < expectedLength) arr[index] = obj[key];
+        });
         return arr;
     }
-    
-    // 게임 시작 처리
+
     handleGameStart() {
-        console.log('🎮 게임 시작 처리');
+        console.log('🎮 Handling game start');
         this.gameStarted = true;
         this.isGameInProgress = true;
         this.currentPlayer = 'white';
-        this.isMovePending = false; // 게임 시작 시 이동 플래그 초기화
+        this.isMovePending = false; // Reset lock on game start
         this.showGameButtons();
         this.updateGameStatus();
         this.startTurnTimer();
     }
-
-    // 게임 재시작 처리
+    
     handleGameRestart(gameData) {
-        console.log('🔄 게임 재시작 처리:', gameData);
-        
-        // 게임 상태 초기화
+        console.log('🔄 Handling game restart:', gameData);
         this.gameStarted = true;
         this.isGameInProgress = true;
         this.currentPlayer = 'white';
         this.selectedSquare = null;
         this.currentTurnTime = this.turnTimeLimit;
-        this.isMovePending = false; // 게임 재시작 시 이동 플래그 초기화
+        this.isMovePending = false;
+        this.capturedPieces = gameData.capturedPieces || { white: [], black: [] };
         
-        // 잡힌 기물 초기화
-        this.capturedPieces = { white: [], black: [] };
-        if (gameData.capturedPieces) {
-            this.capturedPieces = gameData.capturedPieces;
-        }
-        
-        // UI 상태 복구
         const gameStatus = document.getElementById('gameStatus');
-        gameStatus.textContent = '게임이 재시작되었습니다!';
+        gameStatus.textContent = 'Game has been restarted!';
         gameStatus.style.color = '#28a745';
-        gameStatus.style.fontSize = '1.1rem';
-        gameStatus.style.fontWeight = 'bold';
         
-        // 타이머 표시 복구
         const timerElement = document.getElementById('turnTimer');
-        if (timerElement) {
-            timerElement.style.display = 'block';
-        }
+        if (timerElement) timerElement.style.display = 'block';
         
-        // 버튼 상태 업데이트
         this.showGameButtons();
-        
-        // 타이머 재시작
         this.resetTurnTimer();
-        this.startTurnTimer();
         
-        // 보드 동기화 및 렌더링
-        if (gameData.board) {
-            this.syncBoard(gameData.board);
-        }
+        if (gameData.board) this.syncBoard(gameData.board);
         
-        console.log('✅ 게임 재시작 완료');
-        
-        // 재시작 알림
-        setTimeout(() => {
-            alert('🎮 게임이 재시작되었습니다! 🎮');
-        }, 500);
-    }
-    
-    // 게임 코드 관련 메서드들
-    generateGameCode() {
-        // 5자리 랜덤 숫자 코드 생성
-        this.gameCode = Math.floor(10000 + Math.random() * 90000).toString();
+        console.log('✅ Game restart complete');
+        setTimeout(() => alert('🎮 The game has been restarted! 🎮'), 500);
     }
     
     showGameCode() {
         const gameCodeContainer = document.getElementById('gameCodeContainer');
         const gameCodeElement = document.getElementById('gameCode');
-        
         if (gameCodeContainer && gameCodeElement && this.gameCode) {
             gameCodeElement.textContent = this.gameCode;
             gameCodeContainer.style.display = 'flex';
         }
     }
-    
+
     hideGameCode() {
         const gameCodeContainer = document.getElementById('gameCodeContainer');
-        if (gameCodeContainer) {
-            gameCodeContainer.style.display = 'none';
-        }
+        if (gameCodeContainer) gameCodeContainer.style.display = 'none';
         this.gameCode = null;
     }
-    
+
     copyGameCode() {
         if (this.gameCode) {
             navigator.clipboard.writeText(this.gameCode).then(() => {
-                // 복사 성공 피드백
                 const copyBtn = document.getElementById('copyCodeBtn');
                 const originalText = copyBtn.textContent;
                 copyBtn.textContent = '✓';
                 copyBtn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
-                
                 setTimeout(() => {
                     copyBtn.textContent = originalText;
                     copyBtn.style.background = 'linear-gradient(135deg, #17a2b8, #138496)';
                 }, 1500);
-            }).catch(err => {
-                console.error('코드 복사 실패:', err);
-                // 복사 실패시 텍스트 선택으로 대체
-                const gameCodeElement = document.getElementById('gameCode');
-                if (gameCodeElement) {
-                    const range = document.createRange();
-                    range.selectNodeContents(gameCodeElement);
-                    const selection = window.getSelection();
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                }
-            });
+            }).catch(err => console.error('Failed to copy code: ', err));
         }
     }
-    
-    // 실제 게임 시작 메서드
+
     async startActualGame() {
-        if (!this.isRoomHost || !this.gameRef) {
-            console.log('⚠️ 게임 시작 권한이 없습니다');
-            return;
-        }
-        
-        console.log('🔥 Firebase 게임 시작');
-        
+        if (!this.isRoomHost || !this.gameRef) return;
+        console.log('🔥 Starting game via Firebase');
         try {
             await this.gameRef.update({
                 gameStarted: true,
+                isGameInProgress: true, // Also set this to ensure state is correct
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
-            
         } catch (error) {
-            console.error('❌ 게임 시작 실패:', error);
+            console.error('❌ Failed to start game:', error);
         }
     }
-    
-    // 대기 상태 표시
+
     showWaitingState() {
         const playerElement = document.getElementById('currentPlayer');
         const statusElement = document.getElementById('gameStatus');
         const startBtn = document.getElementById('startGameBtnInRoom');
         
-        if (playerElement) playerElement.textContent = '대기 중';
+        if (playerElement) playerElement.textContent = 'Waiting';
         
         if (this.isRoomHost) {
-            if (statusElement) statusElement.textContent = '상대방을 기다리고 있습니다. 코드를 공유하세요!';
+            if (statusElement) statusElement.textContent = 'Waiting for opponent... Share the code!';
             if (startBtn) startBtn.style.display = 'inline-block';
         } else if (this.isRoomGuest) {
-            if (statusElement) statusElement.textContent = '방장이 게임을 시작하기를 기다리고 있습니다';
+            if (statusElement) statusElement.textContent = 'Waiting for the host to start the game';
             if (startBtn) startBtn.style.display = 'none';
         }
         
         this.hideResetButton();
-        this.updateTimerDisplay();
-        this.updatePlayerNames(); // 플레이어 컨테이너 업데이트
+        this.updatePlayerNames();
     }
-    
-    // 게임 중 버튼들 표시
+
     showGameButtons() {
         const startBtn = document.getElementById('startGameBtnInRoom');
         const resetBtn = document.getElementById('resetBtn');
-        
         if (startBtn) startBtn.style.display = 'none';
         if (resetBtn) resetBtn.style.display = 'inline-block';
     }
-    
-    // 리셋 버튼 숨기기
+
     hideResetButton() {
         const resetBtn = document.getElementById('resetBtn');
         if (resetBtn) resetBtn.style.display = 'none';
     }
-    
-    // 모든 버튼 숨기기
+
     hideAllButtons() {
         const startBtn = document.getElementById('startGameBtnInRoom');
         const resetBtn = document.getElementById('resetBtn');
-        
         if (startBtn) startBtn.style.display = 'none';
         if (resetBtn) resetBtn.style.display = 'none';
     }
-    
-    // 방 참가 관련 메서드들
+
     async joinRoom() {
-        // 이름 입력 검증
         const guestNameInput = document.getElementById('guestNameInput');
         const guestName = guestNameInput.value.trim();
         const codeInput = document.getElementById('roomCodeInput');
         const enteredCode = codeInput.value.trim();
-        
         if (!guestName) {
-            this.showNameError(guestNameInput, '이름을 입력해주세요');
+            this.showNameError(guestNameInput, 'Please enter your name');
             return;
         }
-        
         if (guestName.length < 2) {
-            this.showNameError(guestNameInput, '2글자 이상 입력해주세요');
+            this.showNameError(guestNameInput, 'Name must be at least 2 characters');
             return;
         }
-        
         if (enteredCode.length !== 5) {
-            this.showJoinError('5자리 코드를 입력해주세요');
+            this.showJoinError('Please enter a 5-digit code');
             return;
         }
-        
         if (!/^\d{5}$/.test(enteredCode)) {
-            this.showJoinError('숫자만 입력 가능합니다');
+            this.showJoinError('Code must be numbers only');
             return;
         }
-        
-        console.log('🔥 Firebase 방 참가 시도:', enteredCode);
-        
-        // Firebase 연결 확인
         if (!this.database) {
-            this.showJoinError('Firebase 연결을 기다리는 중입니다.');
+            this.showJoinError('Connecting to server...');
             return;
         }
-        
         try {
             this.gameCode = enteredCode;
             this.gameRef = this.database.ref('games/' + this.gameCode);
-            
-            // 방 존재 여부 확인
             const snapshot = await this.gameRef.once('value');
             const roomData = snapshot.val();
+            if (!roomData) throw new Error('Room code does not exist');
+            if (roomData.guestId) throw new Error('This room is already full');
             
-            if (!roomData) {
-                throw new Error('존재하지 않는 방 코드입니다');
-            }
-            
-            if (roomData.guestId) {
-                throw new Error('이미 가득 찬 방입니다');
-            }
-            
-            // 방 참가
             await this.gameRef.update({
                 guestId: this.playerId,
                 guestName: guestName,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
-            
+
             this.guestPlayerName = guestName;
             this.hostPlayerName = roomData.hostName;
             this.isRoomHost = false;
             this.isRoomGuest = true;
             this.isOnlineGame = true;
             
-            console.log('✅ Firebase 방 참가 완료');
-            console.log('🚪 Firebase 참가자 설정 완료');
-            console.log('- 내가 방장:', this.isRoomHost);
-            console.log('- 내가 참가자:', this.isRoomGuest);
-            console.log('- 내 색깔: black (참가자)');
-            console.log('- 시작 턴:', 'white (방장부터)');
+            console.log('✅ Joined Firebase room successfully');
             
-            // UI 전환
             document.getElementById('gameMenu').style.display = 'none';
             document.getElementById('gameContainer').style.display = 'block';
             
-            this.initializeBoard();
-            this.renderBoard();
+            this.syncBoard(roomData.board); // Sync with the host's board
             this.showWaitingState();
             this.updatePlayerNames();
-            
-            // Firebase 리스너 설정
             this.setupFirebaseListeners();
-            
+
         } catch (error) {
-            console.error('❌ 방 참가 실패:', error);
+            console.error('❌ Failed to join room:', error);
             this.showJoinError(error.message);
         }
     }
-    
-    simulateJoinRoom(code) {
-        // 방 참가 시뮬레이션
-        document.getElementById('gameMenu').style.display = 'none';
-        document.getElementById('gameContainer').style.display = 'block';
-        
-        this.isRoomGuest = true;
-        this.isOnlineGame = true;
-        this.gameCode = code;
-        // 시뮬레이션: 방장 이름을 임의로 설정 (실제로는 서버에서 받아옴)
-        if (!this.hostPlayerName) {
-            this.hostPlayerName = '방장';
-        }
-        this.showGameCode();
-        this.initializeBoard();
-        this.renderBoard();
-        
-        // 참가 성공 메시지
-        const statusElement = document.getElementById('gameStatus');
-        if (statusElement) {
-            statusElement.textContent = `방 ${code}에 참가했습니다!`;
-            setTimeout(() => {
-                this.showWaitingState();
-            }, 2000);
-        } else {
-            this.showWaitingState();
-        }
-        
-        // 즉시 플레이어 정보 업데이트
-        this.updatePlayerNames();
-    }
-    
+
     showJoinError(message) {
         const joinBtn = document.getElementById('joinRoomBtn');
         const originalText = joinBtn.textContent;
-        
         joinBtn.textContent = message;
         joinBtn.style.background = 'linear-gradient(45deg, #dc3545, #c82333)';
         joinBtn.disabled = true;
-        
         setTimeout(() => {
             joinBtn.textContent = originalText;
             joinBtn.style.background = 'linear-gradient(45deg, #4ecdc4, #44a08d)';
@@ -1371,392 +833,61 @@ class ChessGame {
     
     clearRoomCodeInput() {
         const codeInput = document.getElementById('roomCodeInput');
-        if (codeInput) {
-            codeInput.value = '';
-        }
+        if (codeInput) codeInput.value = '';
     }
-    
-    // 이름 관련 메서드들
+
     showNameError(inputElement, message) {
         const originalBorder = inputElement.style.borderColor;
         const originalPlaceholder = inputElement.placeholder;
-        
         inputElement.style.borderColor = '#dc3545';
         inputElement.placeholder = message;
         inputElement.value = '';
-        
         setTimeout(() => {
             inputElement.style.borderColor = originalBorder;
             inputElement.placeholder = originalPlaceholder;
         }, 3000);
     }
-    
+
     clearNameInputs() {
-        const hostNameInput = document.getElementById('hostNameInput');
-        const guestNameInput = document.getElementById('guestNameInput');
-        
-        if (hostNameInput) hostNameInput.value = '';
-        if (guestNameInput) guestNameInput.value = '';
+        document.getElementById('hostNameInput').value = '';
+        document.getElementById('guestNameInput').value = '';
     }
-    
+
     updatePlayerNames() {
-        // 방장은 백 기물, 참가자는 흑 기물
         const whitePlayerElement = document.getElementById('whitePlayerName');
         const blackPlayerElement = document.getElementById('blackPlayerName');
         const whiteContainer = document.getElementById('whitePlayerContainer');
         const blackContainer = document.getElementById('blackPlayerContainer');
         
-        // 방장 (백 기물) 이름 표시
         if (whitePlayerElement) {
-            if (this.hostPlayerName) {
-                whitePlayerElement.textContent = this.hostPlayerName;
-                whitePlayerElement.classList.remove('waiting');
-            } else {
-                whitePlayerElement.textContent = '접속대기중...';
-                whitePlayerElement.classList.add('waiting');
-            }
+            whitePlayerElement.textContent = this.hostPlayerName || 'Waiting...';
+            whitePlayerElement.classList.toggle('waiting', !this.hostPlayerName);
         }
-        
-        // 참가자 (흑 기물) 이름 표시
         if (blackPlayerElement) {
-            if (this.guestPlayerName) {
-                blackPlayerElement.textContent = this.guestPlayerName;
-                blackPlayerElement.classList.remove('waiting');
-            } else {
-                blackPlayerElement.textContent = '접속대기중...';
-                blackPlayerElement.classList.add('waiting');
-            }
+            blackPlayerElement.textContent = this.guestPlayerName || 'Waiting...';
+            blackPlayerElement.classList.toggle('waiting', !this.guestPlayerName);
         }
-        
-        // 컨테이너 항상 표시 (방이 생성되었거나 참가했을 때)
         if (whiteContainer && (this.isRoomHost || this.isRoomGuest)) {
             whiteContainer.style.display = 'flex';
         }
-        
         if (blackContainer && (this.isRoomHost || this.isRoomGuest)) {
             blackContainer.style.display = 'flex';
         }
     }
-    
+
     hidePlayerNames() {
         const whiteContainer = document.getElementById('whitePlayerContainer');
         const blackContainer = document.getElementById('blackPlayerContainer');
-        
-        if (whiteContainer) {
-            whiteContainer.style.display = 'none';
-        }
-        
-        if (blackContainer) {
-            blackContainer.style.display = 'none';
-        }
+        if (whiteContainer) whiteContainer.style.display = 'none';
+        if (blackContainer) blackContainer.style.display = 'none';
     }
-    
-    // WebSocket 통신 메서드들
+
     generatePlayerId() {
         return 'player_' + Math.random().toString(36).substr(2, 9);
     }
-    
-    connectWebSocket() {
-        try {
-            console.log('WebSocket 연결 시도:', this.wsUrl);
-            this.ws = new WebSocket(this.wsUrl);
-            
-            this.ws.onopen = () => {
-                console.log('✅ WebSocket 연결 성공!');
-                this.isConnected = true;
-                this.updateConnectionStatus('연결됨');
-                this.sendMessage({
-                    type: 'player_connect',
-                    playerId: this.playerId
-                });
-            };
-            
-            this.ws.onmessage = (event) => {
-                console.log('📨 메시지 수신:', event.data);
-                const message = JSON.parse(event.data);
-                this.handleWebSocketMessage(message);
-            };
-            
-            this.ws.onclose = (event) => {
-                console.log('❌ WebSocket 연결 종료:', event.code, event.reason);
-                this.isConnected = false;
-                this.updateConnectionStatus('연결 끊김');
-                // 재연결 시도 제거 (Vercel에서는 효과 없음)
-            };
-            
-            this.ws.onerror = (error) => {
-                console.error('🚨 WebSocket 오류:', error);
-                this.isConnected = false;
-                this.updateConnectionStatus('연결 실패');
-            };
-            
-        } catch (error) {
-            console.error('🚨 WebSocket 연결 실패:', error);
-            this.isConnected = false;
-            this.updateConnectionStatus('WebSocket 지원 안됨');
-            // 로컬 테스트를 위한 시뮬레이션 모드로 전환
-            this.simulationMode = true;
-        }
-    }
-    
-    updateConnectionStatus(status) {
-        // 연결 상태를 화면에 표시
-        console.log('🔌 연결 상태:', status);
-        const statusElement = document.getElementById('gameStatus');
-        if (statusElement && !this.isGameInProgress) {
-            statusElement.style.color = this.isConnected ? '#28a745' : '#dc3545';
-            statusElement.textContent = `연결 상태: ${status}`;
-        }
-    }
-    
-    async sendMessage(message) {
-        console.log('📤 HTTP API 요청:', message.type);
-        try {
-            const response = await fetch(`${this.apiUrl}/api/action`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(message)
-            });
-            
-            const result = await response.json();
-            console.log('📥 API 응답:', result);
-            
-            if (result.success) {
-                this.handleApiResponse(result);
-            } else if (result.error) {
-                console.error('❌ API 오류:', result.error);
-                alert('오류: ' + result.error);
-            }
-        } catch (error) {
-            console.error('🚨 HTTP 요청 실패:', error);
-            this.handleLocalSimulation(message);
-        }
-    }
-    
-    handleApiResponse(response) {
-        // API 응답을 WebSocket 메시지 형식으로 변환하여 기존 핸들러 사용
-        switch (response.type) {
-            case 'room_created':
-                this.handleRoomCreated(response);
-                break;
-            case 'room_joined':
-                this.handleRoomJoined(response);
-                break;
-            case 'game_start':
-                this.handleGameStart(response);
-                break;
-        }
-    }
-    
-    startMessagePolling() {
-        console.log('🔄 메시지 폴링 시작 (500ms 간격)');
-        this.pollingInterval = setInterval(() => {
-            this.checkMessages();
-        }, 500); // 0.5초마다 메시지 확인 (더 빠른 반응)
-    }
-    
-    async checkMessages() {
-        try {
-            const response = await fetch(`${this.apiUrl}/api/messages/${this.playerId}`);
-            const result = await response.json();
-            
-            if (result.messages && result.messages.length > 0) {
-                console.log('📬 새 메시지 수신:', result.messages.length, '개');
-                console.log('📬 메시지 내용:', result.messages);
-                for (const message of result.messages) {
-                    console.log('🔄 메시지 처리:', message.type);
-                    this.handleWebSocketMessage(message);
-                }
-            }
-        } catch (error) {
-            console.error('메시지 폴링 오류:', error);
-        }
-    }
-    
-    handleLocalSimulation(message) {
-        // WebSocket 연결이 안 될 때 로컬 시뮬레이션
-        console.log('🎭 로컬 시뮬레이션:', message.type);
-        
-        switch (message.type) {
-            case 'create_room':
-                setTimeout(() => {
-                    if (!this.gameCode) {
-                        this.generateGameCode();
-                    }
-                    this.handleRoomCreated({
-                        roomCode: this.gameCode,
-                        hostName: message.hostName
-                    });
-                }, 500);
-                break;
-                
-            case 'join_room':
-                setTimeout(() => {
-                    // 방 참가 시뮬레이션
-                    this.handleRoomJoined({
-                        roomCode: message.roomCode,
-                        hostName: '시뮬 방장',
-                        guestName: message.guestName
-                    });
-                }, 500);
-                break;
-                
-            case 'start_game':
-                setTimeout(() => {
-                    this.handleGameStart({
-                        roomCode: message.roomCode
-                    });
-                }, 500);
-                break;
-        }
-    }
-    
-    handleWebSocketMessage(message) {
-        switch (message.type) {
-            case 'room_created':
-                this.handleRoomCreated(message);
-                break;
-            case 'room_joined':
-                this.handleRoomJoined(message);
-                break;
-            case 'player_joined':
-                this.handlePlayerJoined(message);
-                break;
-            case 'game_move':
-                this.handleGameMove(message);
-                break;
-            case 'game_start':
-                this.handleGameStart(message);
-                break;
-            case 'timer_sync':
-                this.handleTimerSync(message);
-                break;
-            case 'game_reset':
-                this.handleGameReset(message);
-                break;
-            case 'error':
-                this.handleError(message);
-                break;
-        }
-    }
-    
-    // 서버 메시지 핸들러들
-    handleRoomCreated(message) {
-        console.log('✅ 방 생성 완료:', message);
-        this.gameCode = message.roomCode;
-        this.isRoomHost = true;
-        this.isRoomGuest = false; // 명시적으로 참가자가 아님을 설정
-        
-        console.log('🏠 방장 설정 완료');
-        console.log('- 내가 방장:', this.isRoomHost);
-        console.log('- 내가 참가자:', this.isRoomGuest);
-        console.log('- 내 색깔: white (방장)');
-        console.log('- 현재 턴:', this.currentPlayer);
-        this.hostPlayerName = message.hostName;
-        this.showGameCode();
-        this.updatePlayerNames();
-        console.log('🏠 방장 설정 완료');
-        console.log('- 게임 코드:', this.gameCode);
-        console.log('- 내가 방장:', this.isRoomHost);
-        console.log('- 내가 참가자:', this.isRoomGuest);
-        console.log('- 플레이어 ID:', this.playerId);
-        console.log('- 방장 이름:', this.hostPlayerName);
-    }
-    
-    handleRoomJoined(message) {
-        console.log('✅ 방 참가 완료:', message);
-        this.gameCode = message.roomCode;
-        this.isRoomGuest = true;
-        this.isRoomHost = false; // 명시적으로 방장이 아님을 설정
-        this.hostPlayerName = message.hostName;
-        this.guestPlayerName = message.guestName;
-        this.updatePlayerNames();
-        console.log('🚪 참가자 설정 완료');
-        console.log('- 방장:', this.hostPlayerName);
-        console.log('- 참가자:', this.guestPlayerName);
-        console.log('- 내가 방장:', this.isRoomHost);
-        console.log('- 내가 참가자:', this.isRoomGuest);
-        console.log('- 내 색깔: black (참가자)');
-        console.log('- 현재 턴:', this.currentPlayer);
-        console.log('- 내 플레이어 ID:', this.playerId);
-    }
-    
-    handlePlayerJoined(message) {
-        console.log('🎉 상대방 참가:', message);
-        if (this.isRoomHost) {
-            this.guestPlayerName = message.guestName;
-            this.updatePlayerNames();
-            // 방장에게 게임 시작 권한 알림
-            const statusElement = document.getElementById('gameStatus');
-            if (statusElement) {
-                statusElement.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
-                statusElement.style.color = '#28a745';
-            }
-            console.log('🎮 게임 시작 가능 상태!');
-        }
-    }
-    
-    handleGameMove(message) {
-        console.log('♟️ 상대방 이동 수신:', `(${message.fromRow},${message.fromCol}) → (${message.toRow},${message.toCol})`);
-        console.log('🎯 현재 턴 (변경 전):', this.currentPlayer);
-        console.log('🎯 다음 턴 (변경 후):', message.nextPlayer);
-        
-        // 상대방의 이동을 내 보드에 반영
-        const movingPiece = this.board[message.fromRow][message.fromCol];
-        console.log('🚚 이동하는 기물:', movingPiece);
-        
-        this.board[message.toRow][message.toCol] = this.board[message.fromRow][message.fromCol];
-        this.board[message.fromRow][message.fromCol] = null;
-        
-        // 잡힌 기물 처리
-        if (message.capturedPiece) {
-            console.log('⚔️ 기물 잡힘:', message.capturedPiece);
-            this.capturedPieces[message.capturedPiece.color].push(message.capturedPiece);
-        }
-        
-        this.renderBoard();
-        this.currentPlayer = message.nextPlayer;
-        this.updateGameStatus();
-        this.resetTurnTimer();
-        
-        console.log('🔄 보드 업데이트 완료');
-        console.log('- 다음 플레이어:', this.currentPlayer);
-        console.log('- 내가 방장:', this.isRoomHost, '(백 기물)');
-        console.log('- 내가 참가자:', this.isRoomGuest, '(흑 기물)');
-        console.log('- 내 차례인가?:', (this.isRoomHost && this.currentPlayer === 'white') || (this.isRoomGuest && this.currentPlayer === 'black'));
-    }
-    
-    handleGameStart(message) {
-        console.log('🎮 게임 시작 처리:', message);
-        this.gameStarted = true;
-        this.isGameInProgress = true;
-        this.currentPlayer = 'white';
-        this.showGameButtons();
-        this.updateGameStatus();
-        this.startTurnTimer();
-        console.log('✅ 게임 상태 업데이트 완료');
-        console.log('- 게임 시작됨:', this.gameStarted);
-        console.log('- 게임 진행중:', this.isGameInProgress);
-        console.log('- 현재 플레이어:', this.currentPlayer);
-    }
-    
-    handleTimerSync(message) {
-        this.currentTurnTime = message.timeLeft;
-        this.updateTimerDisplay();
-    }
-    
-    handleGameReset(message) {
-        this.resetGame();
-    }
-    
-    handleError(message) {
-        alert('오류: ' + message.message);
-    }
 }
 
-// 게임 시작
+// Start the game once the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new ChessGame();
 });
