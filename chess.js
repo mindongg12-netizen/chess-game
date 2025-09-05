@@ -607,6 +607,7 @@ class ChessGame {
     
     // 초기 보드 상태 반환
     getInitialBoard() {
+        console.log('🆕 초기 보드 생성');
         const board = Array(8).fill(null).map(() => Array(8).fill(null));
         
         // 백 기물 배치
@@ -735,19 +736,37 @@ class ChessGame {
         // 각 행 검사 및 변환
         for (let i = 0; i < 8; i++) {
             if (!processedBoard[i]) {
-                console.error(`❌ 행 [${i}]이 null 또는 undefined`);
-                return;
+                console.warn(`⚠️ 행 [${i}]이 null 또는 undefined - 빈 행으로 초기화`);
+                // 빈 행을 8개의 null로 채워진 배열로 초기화
+                processedBoard[i] = new Array(8).fill(null);
             }
             
             // 행이 객체인 경우 배열로 변환
-            if (!Array.isArray(processedBoard[i]) && typeof processedBoard[i] === 'object') {
+            else if (!Array.isArray(processedBoard[i]) && typeof processedBoard[i] === 'object') {
                 console.log(`🔄 행 [${i}]을 객체에서 배열로 변환`);
                 processedBoard[i] = this.convertObjectToArray(processedBoard[i]);
+                
+                // 변환 후에도 유효하지 않으면 빈 행으로 초기화
+                if (!Array.isArray(processedBoard[i])) {
+                    console.warn(`⚠️ 행 [${i}] 변환 실패 - 빈 행으로 초기화`);
+                    processedBoard[i] = new Array(8).fill(null);
+                }
             }
             
-            if (!Array.isArray(processedBoard[i]) || processedBoard[i].length !== 8) {
-                console.error(`❌ 유효하지 않은 새 보드 행 [${i}]:`, processedBoard[i]);
-                return;
+            // 배열이지만 길이가 8이 아닌 경우 보정
+            if (Array.isArray(processedBoard[i])) {
+                if (processedBoard[i].length < 8) {
+                    console.warn(`⚠️ 행 [${i}] 길이 부족 (${processedBoard[i].length}) - null로 채움`);
+                    while (processedBoard[i].length < 8) {
+                        processedBoard[i].push(null);
+                    }
+                } else if (processedBoard[i].length > 8) {
+                    console.warn(`⚠️ 행 [${i}] 길이 초과 (${processedBoard[i].length}) - 8개로 자름`);
+                    processedBoard[i] = processedBoard[i].slice(0, 8);
+                }
+            } else {
+                console.error(`❌ 행 [${i}]이 여전히 배열이 아님:`, processedBoard[i]);
+                processedBoard[i] = new Array(8).fill(null);
             }
         }
         
@@ -787,18 +806,18 @@ class ChessGame {
     }
     
     // 객체를 배열로 변환하는 헬퍼 함수
-    convertObjectToArray(obj) {
+    convertObjectToArray(obj, expectedLength = 8) {
         if (!obj || typeof obj !== 'object') {
             console.error('❌ 변환할 수 없는 객체:', obj);
-            return null;
+            return new Array(expectedLength).fill(null);
         }
         
-        const arr = [];
-        const keys = Object.keys(obj).sort((a, b) => parseInt(a) - parseInt(b));
+        const arr = new Array(expectedLength).fill(null);
+        const keys = Object.keys(obj);
         
         for (const key of keys) {
             const index = parseInt(key);
-            if (!isNaN(index)) {
+            if (!isNaN(index) && index >= 0 && index < expectedLength) {
                 arr[index] = obj[key];
             }
         }
