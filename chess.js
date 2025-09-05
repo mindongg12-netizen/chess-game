@@ -140,6 +140,12 @@ class ChessGame {
             this.isRoomGuest = false;
             this.isOnlineGame = true;
             
+            console.log('🏠 Firebase 방장 설정 완료');
+            console.log('- 내가 방장:', this.isRoomHost);
+            console.log('- 내가 참가자:', this.isRoomGuest);
+            console.log('- 내 색깔: white (방장)');
+            console.log('- 시작 턴:', 'white');
+            
             // Firebase에 방 생성
             const roomData = {
                 hostId: this.playerId,
@@ -348,15 +354,29 @@ class ChessGame {
         console.log('🎯 현재 턴:', this.currentPlayer);
         console.log('🏠 내가 방장:', this.isRoomHost);
         console.log('🚪 내가 참가자:', this.isRoomGuest);
+        console.log('🎮 게임 진행 상태:', this.isGameInProgress);
+        console.log('🔄 온라인 게임:', this.isOnlineGame);
         
-        // 플레이어 권한 체크
+        // 플레이어 권한 체크 - 더 엄격하게
         const myColor = this.isRoomHost ? 'white' : 'black';
         console.log('🎨 내 색깔:', myColor);
+        console.log('🎯 현재 차례:', this.currentPlayer);
+        console.log('🔍 턴 체크:', `${this.currentPlayer} === ${myColor} ? ${this.currentPlayer === myColor}`);
         
         if (this.currentPlayer !== myColor) {
-            console.log('⚠️ 내 차례가 아님 - 현재:', this.currentPlayer, '나:', myColor);
+            console.warn('❌ 권한 없음 - 내 차례가 아닙니다!');
+            console.warn(`   현재 턴: ${this.currentPlayer}`);
+            console.warn(`   내 색깔: ${myColor}`);
+            console.warn(`   방장 여부: ${this.isRoomHost}`);
+            console.warn(`   참가자 여부: ${this.isRoomGuest}`);
+            
+            // 사용자에게 알림
+            const currentPlayerText = this.currentPlayer === 'white' ? '백' : '흑';
+            alert(`⚠️ ${currentPlayerText}의 차례입니다! 상대방의 턴을 기다려주세요.`);
             return;
         }
+        
+        console.log('✅ 권한 확인 완료 - 내 차례입니다');
         
         const piece = this.board[row][col];
         console.log('♟️ 클릭된 기물:', piece);
@@ -501,9 +521,19 @@ class ChessGame {
     }
     
     async makeMove(fromRow, fromCol, toRow, toCol) {
+        // 최종 권한 체크 (이중 보안)
+        const myColor = this.isRoomHost ? 'white' : 'black';
+        if (this.currentPlayer !== myColor) {
+            console.error('❌ makeMove 권한 체크 실패!');
+            console.error(`   현재 턴: ${this.currentPlayer}, 내 색깔: ${myColor}`);
+            alert('⚠️ 권한이 없습니다! 상대방의 턴입니다.');
+            return;
+        }
+        
         // 이동 처리 시작
         this.isMovePending = true;
         console.log('🔒 이동 처리 시작 - 추가 이동 차단');
+        console.log(`🎯 이동 실행: ${myColor} 플레이어의 턴`);
         
         const piece = this.board[fromRow][fromCol];
         const capturedPiece = this.board[toRow][toCol];
@@ -815,7 +845,10 @@ class ChessGame {
             console.log('🔥 게임 상태 업데이트:', gameData);
             console.log('📋 보드 데이터 타입:', typeof gameData.board);
             console.log('📋 보드 데이터 길이:', gameData.board ? gameData.board.length : 'null');
-            console.log('📋 보드 데이터:', gameData.board);
+            console.log('🎯 Firebase currentPlayer:', gameData.currentPlayer);
+            console.log('🎯 로컬 currentPlayer:', this.currentPlayer);
+            console.log('🏠 내 방장 상태:', this.isRoomHost);
+            console.log('🚪 내 참가자 상태:', this.isRoomGuest);
             
             // 참가자 정보 업데이트
             if (gameData.guestId && !this.guestPlayerName) {
@@ -1266,6 +1299,11 @@ class ChessGame {
             this.isOnlineGame = true;
             
             console.log('✅ Firebase 방 참가 완료');
+            console.log('🚪 Firebase 참가자 설정 완료');
+            console.log('- 내가 방장:', this.isRoomHost);
+            console.log('- 내가 참가자:', this.isRoomGuest);
+            console.log('- 내 색깔: black (참가자)');
+            console.log('- 시작 턴:', 'white (방장부터)');
             
             // UI 전환
             document.getElementById('gameMenu').style.display = 'none';
@@ -1610,6 +1648,12 @@ class ChessGame {
         this.gameCode = message.roomCode;
         this.isRoomHost = true;
         this.isRoomGuest = false; // 명시적으로 참가자가 아님을 설정
+        
+        console.log('🏠 방장 설정 완료');
+        console.log('- 내가 방장:', this.isRoomHost);
+        console.log('- 내가 참가자:', this.isRoomGuest);
+        console.log('- 내 색깔: white (방장)');
+        console.log('- 현재 턴:', this.currentPlayer);
         this.hostPlayerName = message.hostName;
         this.showGameCode();
         this.updatePlayerNames();
@@ -1634,6 +1678,8 @@ class ChessGame {
         console.log('- 참가자:', this.guestPlayerName);
         console.log('- 내가 방장:', this.isRoomHost);
         console.log('- 내가 참가자:', this.isRoomGuest);
+        console.log('- 내 색깔: black (참가자)');
+        console.log('- 현재 턴:', this.currentPlayer);
         console.log('- 내 플레이어 ID:', this.playerId);
     }
     
