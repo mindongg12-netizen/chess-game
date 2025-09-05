@@ -62,13 +62,13 @@ const server = http.createServer((req, res) => {
                 console.log('파일 읽기 오류:', err);
                 res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
                 res.end('서버 오류: ' + err.code, 'utf-8');
-            } else {
+        } else {
                 console.log('파일 전송 성공:', filePath);
-                res.writeHead(200, { 'Content-Type': contentType });
-                res.end(content, 'utf-8');
-            }
-        });
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.end(content, 'utf-8');
+        }
     });
+});
 });
 
 // API 요청 처리 함수
@@ -92,6 +92,28 @@ function handleApiRequest(req, res) {
             } else if (method === 'GET' && url.startsWith('/api/messages/')) {
                 const playerId = url.split('/').pop();
                 const response = getPlayerMessages(playerId);
+                sendJsonResponse(res, response);
+            } else if (method === 'GET' && url === '/api/heartbeat') {
+                // 하트비트 엔드포인트
+                const response = {
+                    status: 'alive',
+                    timestamp: Date.now(),
+                    activeRooms: gameRooms.size,
+                    activePlayers: playerMessages.size
+                };
+                sendJsonResponse(res, response);
+            } else if (method === 'GET' && url === '/api/status') {
+                // 서버 상태 확인 엔드포인트
+                const response = {
+                    serverTime: Date.now(),
+                    rooms: Array.from(gameRooms.keys()),
+                    roomDetails: Array.from(gameRooms.entries()).map(([code, room]) => ({
+                        code,
+                        players: room.hostName && room.guestName ? 2 : 1,
+                        gameStarted: room.gameStarted,
+                        lastActivity: room.lastActivity
+                    }))
+                };
                 sendJsonResponse(res, response);
             } else {
                 sendJsonResponse(res, { error: '알 수 없는 API 엔드포인트' }, 404);
