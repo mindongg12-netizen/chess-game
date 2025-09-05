@@ -549,6 +549,13 @@ class ChessGame {
         // 게임이 끝났으면 로컬에서도 처리
         if (gameEnded) {
             this.endGame(winner);
+        } else {
+            // 게임이 계속되면 로컬에서도 플레이어 변경
+            if (!this.isOnlineGame || !this.gameRef) {
+                // 오프라인 게임인 경우 로컬에서 플레이어 변경
+                this.switchPlayer();
+            }
+            // 온라인 게임인 경우 Firebase 리스너를 통해 자동으로 동기화됨
         }
         
         this.renderBoard();
@@ -591,13 +598,27 @@ class ChessGame {
 
     switchPlayer() {
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+        this.updateGameStatus();  // 턴 표시 업데이트 추가
         this.resetTurnTimer();
     }
     
     updateGameStatus() {
         const playerText = this.currentPlayer === 'white' ? '백의 차례' : '흑의 차례';
-        document.getElementById('currentPlayer').textContent = playerText;
-        document.getElementById('gameStatus').textContent = '게임이 진행 중입니다';
+        console.log(`📝 게임 상태 업데이트: ${playerText} (현재 플레이어: ${this.currentPlayer})`);
+        
+        const currentPlayerElement = document.getElementById('currentPlayer');
+        if (currentPlayerElement) {
+            currentPlayerElement.textContent = playerText;
+            console.log('✅ UI 텍스트 업데이트 완료:', currentPlayerElement.textContent);
+        } else {
+            console.error('❌ currentPlayer 엘리먼트를 찾을 수 없음');
+        }
+        
+        const gameStatusElement = document.getElementById('gameStatus');
+        if (gameStatusElement) {
+            gameStatusElement.textContent = '게임이 진행 중입니다';
+        }
+        
         this.updateTimerDisplay();
     }
     
@@ -806,9 +827,11 @@ class ChessGame {
             
             // 현재 플레이어 동기화
             if (gameData.currentPlayer !== this.currentPlayer) {
+                console.log(`🔄 플레이어 변경: ${this.currentPlayer} → ${gameData.currentPlayer}`);
                 this.currentPlayer = gameData.currentPlayer;
                 this.updateGameStatus();
                 this.resetTurnTimer();
+                console.log('✅ 턴 표시 업데이트 완료:', this.currentPlayer);
             }
             
             // 잡힌 기물 동기화
