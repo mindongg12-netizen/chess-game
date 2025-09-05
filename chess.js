@@ -57,6 +57,7 @@ class ChessGame {
         
         this.initializeEventListeners();
         this.startMessagePolling();
+        this.startHealthCheck();
     }
     
     initializeEventListeners() {
@@ -156,6 +157,10 @@ class ChessGame {
         this.clearRoomCodeInput();
         this.clearNameInputs();
         this.hidePlayerNames();
+        
+        // 폴링 및 헬스체크 정리
+        this.pollingActive = false;
+        
         document.getElementById('gameContainer').style.display = 'none';
         document.getElementById('gameMenu').style.display = 'block';
         this.gameStarted = false;
@@ -166,6 +171,11 @@ class ChessGame {
         this.isOnlineGame = false;
         this.hostPlayerName = '';
         this.guestPlayerName = '';
+        
+        // 메뉴로 돌아갔을 때도 폴링은 유지 (새 게임을 위해)
+        setTimeout(() => {
+            this.pollingActive = true;
+        }, 1000);
     }
     
     initializeBoard() {
@@ -923,20 +933,32 @@ class ChessGame {
         }
     }
     
-    async sendMessage(message) {
-        console.log('📤 HTTP API 요청:', message.type);
+    async sendMessage(message, retryCount = 0) {
+        const maxRetries = 3;
+        console.log('📤 HTTP API 요청:', message.type, retryCount > 0 ? `(재시도 ${retryCount})` : '');
         console.log('📤 전송 데이터:', message);
         console.log('🏠 현재 게임 코드:', this.gameCode);
         console.log('🆔 현재 플레이어 ID:', this.playerId);
         
         try {
+            // 타임아웃 설정 (10초)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
             const response = await fetch(`${this.apiUrl}/api/action`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(message)
+                body: JSON.stringify(message),
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const result = await response.json();
             console.log('📥 API 응답:', result);
@@ -948,16 +970,31 @@ class ChessGame {
                 console.error('❌ 실패한 요청:', message);
                 
                 // 방이 사라진 경우 게임 초기화
-                if (result.error.includes('존재하지 않는') || result.error.includes('방')) {
+                if (result.error.includes('존재하지 않는') || result.error.includes('방') ||
+                    result.error.includes('만료')) {
                     console.log('🔄 방이 사라짐 - 메인 메뉴로 돌아감');
-                    alert('게임 방이 사라졌습니다. 메인 메뉴로 돌아갑니다.');
+                    alert('게임 세션이 만료되었습니다. 새로운 게임을 시작해주세요.');
                     this.backToMenu();
                 } else {
                     alert('오류: ' + result.error);
                 }
             }
         } catch (error) {
-            console.error('🚨 HTTP 요청 실패:', error);
+            console.error(`🚨 HTTP 요청 실패 (시도 ${retryCount + 1}/${maxRetries + 1}):`, error.message);
+            
+            // 재시도 로직
+            if (retryCount < maxRetries && 
+                (error.name === 'AbortError' || error.message.includes('fetch') || error.message.includes('network'))) {
+                const delay = Math.min(2 ** retryCount * 1000, 5000); // 최대 5초 대기
+                console.log(`🔄 ${delay/1000}초 후 재시도...`);
+                setTimeout(() => {
+                    this.sendMessage(message, retryCount + 1);
+                }, delay);
+                return;
+            }
+            
+            // 최종 실패 시 로컬 시뮬레이션
+            console.log('⚠️ 최종 실패 - 로컬 시뮬레이션으로 전환');
             this.handleLocalSimulation(message);
         }
     }
@@ -979,15 +1016,41 @@ class ChessGame {
     
     startMessagePolling() {
         console.log('🔄 메시지 폴링 시작 (500ms 간격)');
+        this.pollingFailCount = 0;
+        this.maxPollingFails = 5;
+        this.pollingActive = true;
+        
         this.pollingInterval = setInterval(() => {
-            this.checkMessages();
-        }, 500); // 0.5초마다 메시지 확인 (더 빠른 반응)
+            if (this.pollingActive) {
+                this.checkMessages();
+            }
+        }, 500);
     }
     
     async checkMessages() {
+        if (!this.pollingActive) return;
+        
         try {
-            const response = await fetch(`${this.apiUrl}/api/messages/${this.playerId}`);
+            console.log('📡 메시지 폴링 중...');
+            
+            // 타임아웃 설정 (5초)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(`${this.apiUrl}/api/messages/${this.playerId}`, {
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const result = await response.json();
+            
+            // 폴링 성공 시 실패 카운트 리셋
+            this.pollingFailCount = 0;
             
             if (result.messages && result.messages.length > 0) {
                 console.log('📬 새 메시지 수신:', result.messages.length, '개');
@@ -997,8 +1060,89 @@ class ChessGame {
                     this.handleWebSocketMessage(message);
                 }
             }
+            
         } catch (error) {
-            console.error('메시지 폴링 오류:', error);
+            this.pollingFailCount++;
+            console.error(`❌ 메시지 폴링 오류 (${this.pollingFailCount}/${this.maxPollingFails}):`, error.message);
+            
+            // 연속 실패 시 폴링 재시작
+            if (this.pollingFailCount >= this.maxPollingFails) {
+                console.log('⚠️ 폴링 연속 실패 - 폴링 재시작');
+                this.restartPolling();
+            }
+        }
+    }
+    
+    restartPolling() {
+        console.log('🔄 폴링 재시작');
+        this.pollingActive = false;
+        
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+        }
+        
+        this.pollingFailCount = 0;
+        
+        // 2초 후 폴링 재시작
+        setTimeout(() => {
+            console.log('♻️ 폴링 재개');
+            this.pollingActive = true;
+            this.startMessagePolling();
+        }, 2000);
+    }
+    
+    startHealthCheck() {
+        console.log('💓 서버 헬스체크 시작 (30초 간격)');
+        this.healthCheckInterval = setInterval(() => {
+            this.checkServerHealth();
+        }, 30000); // 30초마다 서버 상태 체크
+    }
+    
+    async checkServerHealth() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(`${this.apiUrl}/api/messages/${this.playerId}`, {
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                console.log('💓 서버 헬스체크 성공');
+                this.updateConnectionStatus('서버 연결 양호');
+            } else {
+                throw new Error(`서버 응답 오류: ${response.status}`);
+            }
+        } catch (error) {
+            console.warn('💔 서버 헬스체크 실패:', error.message);
+            this.updateConnectionStatus('서버 연결 불안정');
+            
+            // 헬스체크 실패 시 폴링 재시작
+            if (this.pollingFailCount > 2) {
+                console.log('🔄 헬스체크 실패로 인한 폴링 재시작');
+                this.restartPolling();
+            }
+        }
+    }
+    
+    // 리소스 정리
+    cleanup() {
+        console.log('🧹 리소스 정리 시작');
+        this.pollingActive = false;
+        
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
+        }
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
         }
     }
     
@@ -1195,6 +1339,26 @@ class ChessGame {
 }
 
 // 게임 시작
+let chessGame;
 document.addEventListener('DOMContentLoaded', () => {
-    new ChessGame();
+    chessGame = new ChessGame();
+});
+
+// 페이지 종료 시 정리
+window.addEventListener('beforeunload', () => {
+    if (chessGame) {
+        chessGame.cleanup();
+    }
+});
+
+// 페이지 숨김 시에도 정리 (모바일 대응)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && chessGame) {
+        console.log('📱 페이지 숨김 - 리소스 정리');
+        chessGame.cleanup();
+    } else if (!document.hidden && chessGame) {
+        console.log('📱 페이지 복원 - 폴링 재시작');
+        chessGame.startMessagePolling();
+        chessGame.startHealthCheck();
+    }
 });
