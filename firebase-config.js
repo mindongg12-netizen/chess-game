@@ -3,17 +3,21 @@
 
 const firebaseConfig = {
     // 복사하신 Firebase SDK 설정을 여기에 붙여넣어주세요
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com/",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
+    apiKey: "AIzaSyAFoux_5Q28hCNiSRvhTKMOYM4iBr6nSiM",
+    authDomain: "online-chess-g.firebaseapp.com",
+    projectId: "online-chess-g",
+    storageBucket: "online-chess-g.firebasestorage.app",
+    messagingSenderId: "410964337544",
+    appId: "1:410964337544:web:6e1eac7efb9b620d0ad03d",
+    databaseURL:"https://online-chess-g-default-rtdb.asia-southeast1.firebasedatabase.app/"
+  };
 
 // Firebase 초기화
 firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+window.database = firebase.database();
+window.firebaseReady = true;
 
 console.log('🔥 Firebase 초기화 완료');
+
+// Firebase 준비 완료 이벤트 발생
+document.dispatchEvent(new Event('firebaseReady'));
