@@ -111,34 +111,45 @@ function sendJsonResponse(res, data, statusCode = 200) {
 
 function handleSimpleMessage(data) {
     console.log('📨 메시지 수신:', data.type, '방:', data.roomCode);
+    console.log('📨 메시지 내용:', data);
     
-    if (!data.roomCode) return;
+    if (!data.roomCode) {
+        console.log('❌ 방 코드 없음');
+        return;
+    }
     
     // 해당 방의 메시지 목록에 추가
     if (!activeMessages.has(data.roomCode)) {
         activeMessages.set(data.roomCode, []);
+        console.log('🆕 새 방 메시지 큐 생성:', data.roomCode);
     }
     
     const messages = activeMessages.get(data.roomCode);
-    messages.push({
+    const messageWithTimestamp = {
         ...data,
         timestamp: Date.now()
-    });
+    };
+    
+    messages.push(messageWithTimestamp);
     
     // 최근 10개 메시지만 유지
     if (messages.length > 10) {
         messages.shift();
     }
     
-    console.log('✅ 메시지 저장 완료');
+    console.log('✅ 메시지 저장 완료 - 현재 큐 크기:', messages.length);
+    console.log('📋 현재 방 목록:', Array.from(activeMessages.keys()));
 }
 
 function getSimpleMessages(roomCode) {
     const messages = activeMessages.get(roomCode) || [];
-    // 메시지 조회 후 삭제 (한 번만 읽기)
-    activeMessages.delete(roomCode);
+    // 메시지 조회 후 해당 방의 메시지만 삭제
+    activeMessages.set(roomCode, []);
     
     console.log('📬 메시지 조회:', roomCode, '개수:', messages.length);
+    if (messages.length > 0) {
+        console.log('📬 메시지 내용:', messages.map(m => m.type));
+    }
     return { messages: messages };
 }
 

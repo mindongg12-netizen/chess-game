@@ -910,16 +910,19 @@ class ChessGame {
     
     async sendSimpleMessage(message) {
         console.log('📤 메시지 전송:', message.type, '방:', message.roomCode);
+        console.log('📤 전송 데이터:', message);
         
         try {
-            await fetch(`${this.apiUrl}/api/send`, {
+            const response = await fetch(`${this.apiUrl}/api/send`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(message)
             });
-            console.log('✅ 메시지 전송 완료');
+            
+            const result = await response.json();
+            console.log('✅ 메시지 전송 완료:', result);
         } catch (error) {
             console.error('❌ 메시지 전송 실패:', error);
         }
@@ -941,28 +944,37 @@ class ChessGame {
     }
     
     startMessagePolling() {
-        console.log('🔄 메시지 폴링 시작 (500ms 간격)');
+        console.log('🔄 메시지 폴링 시작 (1초 간격)');
         this.pollingInterval = setInterval(() => {
             this.checkMessages();
-        }, 500); // 0.5초마다 메시지 확인 (더 빠른 반응)
+        }, 1000); // 1초마다 메시지 확인
     }
     
     async checkMessages() {
-        if (!this.gameCode) return; // 방 코드가 없으면 체크 안함
+        if (!this.gameCode) {
+            console.log('⚠️ 방 코드 없음 - 폴링 스킵');
+            return;
+        }
+        
+        console.log('📡 메시지 체크 중 - 방:', this.gameCode);
         
         try {
             const response = await fetch(`${this.apiUrl}/api/get/${this.gameCode}`);
             const result = await response.json();
             
+            console.log('📥 폴링 응답:', result);
+            
             if (result.messages && result.messages.length > 0) {
                 console.log('📬 새 메시지 수신:', result.messages.length, '개');
                 for (const message of result.messages) {
-                    console.log('🔄 메시지 처리:', message.type);
+                    console.log('🔄 메시지 처리:', message.type, message);
                     this.handleSimpleMessage(message);
                 }
+            } else {
+                console.log('📭 새 메시지 없음');
             }
         } catch (error) {
-            console.error('메시지 폴링 오류:', error);
+            console.error('❌ 메시지 폴링 오류:', error);
         }
     }
     
