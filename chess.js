@@ -462,8 +462,19 @@ class ChessGame {
         const piece = this.board[fromRow][fromCol];
         const capturedPiece = this.board[toRow][toCol];
         
+        // 킹이 잡혔는지 확인
+        let gameEnded = false;
+        let winner = null;
+        
         if (capturedPiece) {
             this.capturedPieces[capturedPiece.color].push(capturedPiece);
+            
+            // 킹이 잡혔으면 게임 종료
+            if (capturedPiece.type === 'king') {
+                gameEnded = true;
+                winner = piece.color; // 킹을 잡은 플레이어가 승리
+                console.log(`👑 ${capturedPiece.color} 킹이 잡혔습니다! ${winner} 승리!`);
+            }
         }
         
         this.board[toRow][toCol] = piece;
@@ -474,24 +485,75 @@ class ChessGame {
             console.log('🔥 Firebase 이동 전송:', `(${fromRow},${fromCol}) → (${toRow},${toCol})`);
             
             try {
-                const nextPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
-                
-                // Firebase 업데이트
-                await this.gameRef.update({
+                const updateData = {
                     board: this.board,
-                    currentPlayer: nextPlayer,
                     capturedPieces: this.capturedPieces,
                     lastActivity: firebase.database.ServerValue.TIMESTAMP
-                });
+                };
+                
+                if (gameEnded) {
+                    // 게임이 끝났으면 종료 정보 추가
+                    updateData.gameEnded = true;
+                    updateData.winner = winner;
+                    updateData.gameStarted = false; // 게임 진행 중단
+                    console.log('🏆 게임 종료 정보 Firebase 전송:', { winner, gameEnded });
+                } else {
+                    // 게임이 계속되면 다음 플레이어로 변경
+                    const nextPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+                    updateData.currentPlayer = nextPlayer;
+                }
+                
+                // Firebase 업데이트
+                await this.gameRef.update(updateData);
                 
             } catch (error) {
                 console.error('❌ 이동 전송 실패:', error);
             }
         }
         
+        // 게임이 끝났으면 로컬에서도 처리
+        if (gameEnded) {
+            this.endGame(winner);
+        }
+        
         this.renderBoard();
     }
     
+    // 게임 종료 처리
+    endGame(winner) {
+        console.log(`🎯 게임 종료: ${winner} 승리!`);
+        
+        // 게임 상태 업데이트
+        this.isGameInProgress = false;
+        this.gameStarted = false;
+        
+        // 타이머 정지
+        this.stopTurnTimer();
+        
+        // UI 업데이트
+        const gameStatus = document.getElementById('gameStatus');
+        const winnerText = winner === 'white' ? '백' : '흑';
+        gameStatus.textContent = `🎉 게임 종료! ${winnerText}의 승리! 🎉`;
+        gameStatus.style.color = '#dc3545';
+        gameStatus.style.fontSize = '1.3rem';
+        gameStatus.style.fontWeight = 'bold';
+        
+        // 타이머 표시 숨기기
+        const timerElement = document.getElementById('turnTimer');
+        if (timerElement) {
+            timerElement.style.display = 'none';
+        }
+        
+        // 모든 말 선택 해제
+        this.selectedSquare = null;
+        this.clearHighlights();
+        
+        // 축하 메시지 표시
+        setTimeout(() => {
+            alert(`🎊 축하합니다! ${winnerText}팀이 승리했습니다! 🎊\n\n상대방의 킹을 잡아 게임에서 이겼습니다!`);
+        }, 500);
+    }
+
     switchPlayer() {
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
         this.resetTurnTimer();
@@ -730,6 +792,16 @@ class ChessGame {
                 // capturedPieces가 없는 경우 기본값으로 초기화
                 console.warn('⚠️ Firebase에서 capturedPieces 없음 - 기본값으로 초기화');
                 this.capturedPieces = { white: [], black: [] };
+            }
+            
+            // 게임 종료 상태 확인
+            if (gameData.gameEnded && gameData.winner) {
+                console.log('🏆 게임 종료 신호 수신:', { winner: gameData.winner, gameEnded: gameData.gameEnded });
+                
+                // 아직 게임이 진행 중이라면 종료 처리
+                if (this.isGameInProgress) {
+                    this.endGame(gameData.winner);
+                }
             }
         });
         
