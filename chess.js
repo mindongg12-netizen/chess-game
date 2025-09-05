@@ -57,7 +57,6 @@ class ChessGame {
         
         this.initializeEventListeners();
         this.startMessagePolling();
-        this.startHealthCheck();
     }
     
     initializeEventListeners() {
@@ -124,13 +123,10 @@ class ChessGame {
         this.isOnlineGame = true;
         this.isRoomHost = true;
         
-        console.log('📤 서버에 방 생성 요청 전송');
-        // HTTP API로 방 생성 요청
-        this.sendMessage({
-            type: 'create_room',
-            hostName: hostName,
-            playerId: this.playerId
-        });
+        // 클라이언트에서 직접 방 코드 생성 (서버 의존성 제거)
+        this.generateGameCode();
+        this.showGameCode();
+        console.log('🏠 방 생성 완료 - 코드:', this.gameCode);
         
         this.initializeBoard();
         this.renderBoard();
@@ -157,10 +153,6 @@ class ChessGame {
         this.clearRoomCodeInput();
         this.clearNameInputs();
         this.hidePlayerNames();
-        
-        // 폴링 및 헬스체크 정리
-        this.pollingActive = false;
-        
         document.getElementById('gameContainer').style.display = 'none';
         document.getElementById('gameMenu').style.display = 'block';
         this.gameStarted = false;
@@ -171,11 +163,6 @@ class ChessGame {
         this.isOnlineGame = false;
         this.hostPlayerName = '';
         this.guestPlayerName = '';
-        
-        // 메뉴로 돌아갔을 때도 폴링은 유지 (새 게임을 위해)
-        setTimeout(() => {
-            this.pollingActive = true;
-        }, 1000);
     }
     
     initializeBoard() {
@@ -429,21 +416,10 @@ class ChessGame {
                 capturedPiece: capturedPiece,
                 nextPlayer: this.currentPlayer === 'white' ? 'black' : 'white',
                 roomCode: this.gameCode,
-                playerId: this.playerId,
-                // 방 복구를 위한 추가 정보
-                roomInfo: {
-                    hostName: this.hostPlayerName,
-                    guestName: this.guestPlayerName,
-                    isHost: this.isRoomHost,
-                    isGuest: this.isRoomGuest
-                }
+                playerId: this.playerId
             };
             console.log('📤 내 이동 전송:', `(${fromRow},${fromCol}) → (${toRow},${toCol})`);
-            console.log('📤 이동 데이터:', moveData);
-            console.log('🔗 연결 상태:', this.isConnected);
-            console.log('🌐 온라인 게임:', this.isOnlineGame);
-            console.log('🎮 게임 진행중:', this.isGameInProgress);
-            this.sendMessage(moveData);
+            this.sendSimpleMessage(moveData);
         } else {
             console.log('⚠️ 이동 전송 조건 불충족');
             console.log('- 연결 상태:', this.isConnected);
@@ -623,19 +599,13 @@ class ChessGame {
         console.log('🏠 게임 코드:', this.gameCode);
         console.log('🆔 플레이어 ID:', this.playerId);
         
-        if (this.isConnected && this.isOnlineGame && this.isRoomHost) {
-            console.log('📤 서버에 게임 시작 요청 전송');
-            // 서버에 게임 시작 요청
-            this.sendMessage({
-                type: 'start_game',
+        if (this.isRoomHost) {
+            // 참가자에게 게임 시작 알림 전송
+            this.sendSimpleMessage({
+                type: 'game_start',
                 roomCode: this.gameCode,
                 playerId: this.playerId
             });
-        } else {
-            console.log('⚠️ 게임 시작 조건 불충족');
-            if (!this.isConnected) console.log('- 연결되지 않음');
-            if (!this.isOnlineGame) console.log('- 온라인 게임이 아님');
-            if (!this.isRoomHost) console.log('- 방장이 아님');
         }
         
         this.gameStarted = true;
@@ -727,10 +697,14 @@ class ChessGame {
         this.guestPlayerName = guestName;
         this.isRoomGuest = true;
         
-        console.log('📤 서버에 방 참가 요청 전송');
-        // HTTP API로 방 참가 요청
-        this.sendMessage({
-            type: 'join_room',
+        // 클라이언트에서 직접 방 참가 처리
+        this.gameCode = enteredCode;
+        this.isRoomGuest = true;
+        this.hostPlayerName = '방장'; // 기본값
+        
+        // 방장에게 참가 알림 전송
+        this.sendSimpleMessage({
+            type: 'player_joined',
             roomCode: enteredCode,
             guestName: guestName,
             playerId: this.playerId
@@ -745,6 +719,7 @@ class ChessGame {
         this.renderBoard();
         this.showWaitingState();
         this.updatePlayerNames();
+        console.log('🚪 방 참가 완료 - 코드:', enteredCode);
     }
     
     simulateJoinRoom(code) {
@@ -933,69 +908,20 @@ class ChessGame {
         }
     }
     
-    async sendMessage(message, retryCount = 0) {
-        const maxRetries = 3;
-        console.log('📤 HTTP API 요청:', message.type, retryCount > 0 ? `(재시도 ${retryCount})` : '');
-        console.log('📤 전송 데이터:', message);
-        console.log('🏠 현재 게임 코드:', this.gameCode);
-        console.log('🆔 현재 플레이어 ID:', this.playerId);
+    async sendSimpleMessage(message) {
+        console.log('📤 메시지 전송:', message.type, '방:', message.roomCode);
         
         try {
-            // 타임아웃 설정 (10초)
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const response = await fetch(`${this.apiUrl}/api/action`, {
+            await fetch(`${this.apiUrl}/api/send`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(message),
-                signal: controller.signal
+                body: JSON.stringify(message)
             });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const result = await response.json();
-            console.log('📥 API 응답:', result);
-            
-            if (result.success) {
-                this.handleApiResponse(result);
-            } else if (result.error) {
-                console.error('❌ API 오류:', result.error);
-                console.error('❌ 실패한 요청:', message);
-                
-                // 방이 사라진 경우 게임 초기화
-                if (result.error.includes('존재하지 않는') || result.error.includes('방') ||
-                    result.error.includes('만료')) {
-                    console.log('🔄 방이 사라짐 - 메인 메뉴로 돌아감');
-                    alert('게임 세션이 만료되었습니다. 새로운 게임을 시작해주세요.');
-                    this.backToMenu();
-                } else {
-                    alert('오류: ' + result.error);
-                }
-            }
+            console.log('✅ 메시지 전송 완료');
         } catch (error) {
-            console.error(`🚨 HTTP 요청 실패 (시도 ${retryCount + 1}/${maxRetries + 1}):`, error.message);
-            
-            // 재시도 로직
-            if (retryCount < maxRetries && 
-                (error.name === 'AbortError' || error.message.includes('fetch') || error.message.includes('network'))) {
-                const delay = Math.min(2 ** retryCount * 1000, 5000); // 최대 5초 대기
-                console.log(`🔄 ${delay/1000}초 후 재시도...`);
-                setTimeout(() => {
-                    this.sendMessage(message, retryCount + 1);
-                }, delay);
-                return;
-            }
-            
-            // 최종 실패 시 로컬 시뮬레이션
-            console.log('⚠️ 최종 실패 - 로컬 시뮬레이션으로 전환');
-            this.handleLocalSimulation(message);
+            console.error('❌ 메시지 전송 실패:', error);
         }
     }
     
@@ -1016,138 +942,63 @@ class ChessGame {
     
     startMessagePolling() {
         console.log('🔄 메시지 폴링 시작 (500ms 간격)');
-        this.pollingFailCount = 0;
-        this.maxPollingFails = 5;
-        this.pollingActive = true;
-        
         this.pollingInterval = setInterval(() => {
-            if (this.pollingActive) {
-                this.checkMessages();
-            }
-        }, 500);
+            this.checkMessages();
+        }, 500); // 0.5초마다 메시지 확인 (더 빠른 반응)
     }
     
     async checkMessages() {
-        if (!this.pollingActive) return;
+        if (!this.gameCode) return; // 방 코드가 없으면 체크 안함
         
         try {
-            console.log('📡 메시지 폴링 중...');
-            
-            // 타임아웃 설정 (5초)
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch(`${this.apiUrl}/api/messages/${this.playerId}`, {
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
+            const response = await fetch(`${this.apiUrl}/api/get/${this.gameCode}`);
             const result = await response.json();
-            
-            // 폴링 성공 시 실패 카운트 리셋
-            this.pollingFailCount = 0;
             
             if (result.messages && result.messages.length > 0) {
                 console.log('📬 새 메시지 수신:', result.messages.length, '개');
-                console.log('📬 메시지 내용:', result.messages);
                 for (const message of result.messages) {
                     console.log('🔄 메시지 처리:', message.type);
-                    this.handleWebSocketMessage(message);
+                    this.handleSimpleMessage(message);
                 }
             }
-            
         } catch (error) {
-            this.pollingFailCount++;
-            console.error(`❌ 메시지 폴링 오류 (${this.pollingFailCount}/${this.maxPollingFails}):`, error.message);
-            
-            // 연속 실패 시 폴링 재시작
-            if (this.pollingFailCount >= this.maxPollingFails) {
-                console.log('⚠️ 폴링 연속 실패 - 폴링 재시작');
-                this.restartPolling();
-            }
+            console.error('메시지 폴링 오류:', error);
         }
     }
     
-    restartPolling() {
-        console.log('🔄 폴링 재시작');
-        this.pollingActive = false;
+    handleSimpleMessage(message) {
+        console.log('📨 메시지 처리:', message.type);
         
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-        }
-        
-        this.pollingFailCount = 0;
-        
-        // 2초 후 폴링 재시작
-        setTimeout(() => {
-            console.log('♻️ 폴링 재개');
-            this.pollingActive = true;
-            this.startMessagePolling();
-        }, 2000);
-    }
-    
-    startHealthCheck() {
-        console.log('💓 서버 헬스체크 시작 (30초 간격)');
-        this.healthCheckInterval = setInterval(() => {
-            this.checkServerHealth();
-        }, 30000); // 30초마다 서버 상태 체크
-    }
-    
-    async checkServerHealth() {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const response = await fetch(`${this.apiUrl}/api/messages/${this.playerId}`, {
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-                console.log('💓 서버 헬스체크 성공');
-                this.updateConnectionStatus('서버 연결 양호');
-            } else {
-                throw new Error(`서버 응답 오류: ${response.status}`);
-            }
-        } catch (error) {
-            console.warn('💔 서버 헬스체크 실패:', error.message);
-            this.updateConnectionStatus('서버 연결 불안정');
-            
-            // 헬스체크 실패 시 폴링 재시작
-            if (this.pollingFailCount > 2) {
-                console.log('🔄 헬스체크 실패로 인한 폴링 재시작');
-                this.restartPolling();
-            }
-        }
-    }
-    
-    // 리소스 정리
-    cleanup() {
-        console.log('🧹 리소스 정리 시작');
-        this.pollingActive = false;
-        
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-        }
-        if (this.healthCheckInterval) {
-            clearInterval(this.healthCheckInterval);
-            this.healthCheckInterval = null;
-        }
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
+        switch (message.type) {
+            case 'player_joined':
+                if (this.isRoomHost) {
+                    this.guestPlayerName = message.guestName;
+                    this.updatePlayerNames();
+                    const statusElement = document.getElementById('gameStatus');
+                    if (statusElement) {
+                        statusElement.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
+                        statusElement.style.color = '#28a745';
+                    }
+                }
+                break;
+                
+            case 'game_start':
+                this.gameStarted = true;
+                this.isGameInProgress = true;
+                this.currentPlayer = 'white';
+                this.showGameButtons();
+                this.updateGameStatus();
+                this.startTurnTimer();
+                break;
+                
+            case 'game_move':
+                this.handleGameMove(message);
+                break;
         }
     }
     
     handleLocalSimulation(message) {
-        // WebSocket 연결이 안 될 때 로컬 시뮬레이션
+        // 로컬 시뮬레이션 (폴백)
         console.log('🎭 로컬 시뮬레이션:', message.type);
         
         switch (message.type) {
@@ -1339,26 +1190,6 @@ class ChessGame {
 }
 
 // 게임 시작
-let chessGame;
 document.addEventListener('DOMContentLoaded', () => {
-    chessGame = new ChessGame();
-});
-
-// 페이지 종료 시 정리
-window.addEventListener('beforeunload', () => {
-    if (chessGame) {
-        chessGame.cleanup();
-    }
-});
-
-// 페이지 숨김 시에도 정리 (모바일 대응)
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && chessGame) {
-        console.log('📱 페이지 숨김 - 리소스 정리');
-        chessGame.cleanup();
-    } else if (!document.hidden && chessGame) {
-        console.log('📱 페이지 복원 - 폴링 재시작');
-        chessGame.startMessagePolling();
-        chessGame.startHealthCheck();
-    }
+    new ChessGame();
 });

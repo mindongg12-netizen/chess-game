@@ -3,9 +3,8 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
-// 메시지 큐 시스템 (WebSocket 대신)
-const playerMessages = new Map(); // playerId -> messages[]
-const gameRooms = new Map(); // roomCode -> room info
+// 단순 메시지 전달 시스템 (상태 저장 안함)
+const activeMessages = new Map(); // roomCode -> recent messages
 
 // HTTP 서버 생성 (정적 파일 서빙 + API)
 const server = http.createServer((req, res) => {
@@ -85,16 +84,18 @@ function handleApiRequest(req, res) {
             
             console.log('🌐 API 요청:', method, url);
             
-            if (method === 'POST' && url === '/api/action') {
+            if (method === 'POST' && url === '/api/send') {
+                // 단순히 메시지를 받아서 해당 방에 저장
                 const data = JSON.parse(body);
-                const response = handleGameAction(data);
-                sendJsonResponse(res, response);
-            } else if (method === 'GET' && url.startsWith('/api/messages/')) {
-                const playerId = url.split('/').pop();
-                const response = getPlayerMessages(playerId);
+                handleSimpleMessage(data);
+                sendJsonResponse(res, { success: true });
+            } else if (method === 'GET' && url.startsWith('/api/get/')) {
+                // 방 코드로 메시지 조회
+                const roomCode = url.split('/').pop();
+                const response = getSimpleMessages(roomCode);
                 sendJsonResponse(res, response);
             } else {
-                sendJsonResponse(res, { error: '알 수 없는 API 엔드포인트' }, 404);
+                sendJsonResponse(res, { success: true });
             }
         } catch (error) {
             console.error('API 처리 오류:', error);
@@ -108,254 +109,36 @@ function sendJsonResponse(res, data, statusCode = 200) {
     res.end(JSON.stringify(data));
 }
 
-function handleGameAction(data) {
-    console.log('🎮 게임 액션 처리:', data.type);
+function handleSimpleMessage(data) {
+    console.log('📨 메시지 수신:', data.type, '방:', data.roomCode);
     
-    switch (data.type) {
-        case 'create_room':
-            return createRoom(data);
-        case 'join_room':
-            return joinRoom(data);
-        case 'start_game':
-            return startGame(data);
-        case 'game_move':
-            return handleMove(data);
-        default:
-            return { error: '알 수 없는 액션 타입' };
-    }
-}
-
-function createRoom(data) {
-    const roomCode = generateRoomCode();
-    const room = {
-        code: roomCode,
-        hostId: data.playerId,
-        hostName: data.hostName,
-        guestId: null,
-        guestName: null,
-        gameStarted: false,
-        lastActivity: Date.now(),
-        createdAt: Date.now()
-    };
+    if (!data.roomCode) return;
     
-    gameRooms.set(roomCode, room);
-    playerMessages.set(data.playerId, []);
-    
-    console.log('🏠 방 생성:', roomCode, '방장:', data.hostName);
-    console.log('🗂️ 방 생성 후 전체 방 목록:', Array.from(gameRooms.keys()));
-    console.log('📝 방 상세 정보:', room);
-    
-    return {
-        success: true,
-        type: 'room_created',
-        roomCode: roomCode,
-        hostName: data.hostName
-    };
-}
-
-function joinRoom(data) {
-    const room = gameRooms.get(data.roomCode);
-    
-    if (!room) {
-        return { error: '존재하지 않는 방 코드입니다' };
+    // 해당 방의 메시지 목록에 추가
+    if (!activeMessages.has(data.roomCode)) {
+        activeMessages.set(data.roomCode, []);
     }
     
-    if (room.guestId) {
-        return { error: '이미 가득 찬 방입니다' };
-    }
-    
-    room.guestId = data.playerId;
-    room.guestName = data.guestName;
-    room.lastActivity = Date.now();
-    
-    playerMessages.set(data.playerId, []);
-    
-    // 방장에게 알림 메시지 추가
-    addMessageToPlayer(room.hostId, {
-        type: 'player_joined',
-        guestName: data.guestName
+    const messages = activeMessages.get(data.roomCode);
+    messages.push({
+        ...data,
+        timestamp: Date.now()
     });
     
-    console.log('🚪 방 참가:', data.roomCode, '참가자:', data.guestName);
+    // 최근 10개 메시지만 유지
+    if (messages.length > 10) {
+        messages.shift();
+    }
     
-    return {
-        success: true,
-        type: 'room_joined',
-        roomCode: data.roomCode,
-        hostName: room.hostName,
-        guestName: data.guestName
-    };
+    console.log('✅ 메시지 저장 완료');
 }
 
-function startGame(data) {
-    console.log('🎮 게임 시작 요청:', data);
-    const room = gameRooms.get(data.roomCode);
+function getSimpleMessages(roomCode) {
+    const messages = activeMessages.get(roomCode) || [];
+    // 메시지 조회 후 삭제 (한 번만 읽기)
+    activeMessages.delete(roomCode);
     
-    console.log('🏠 방 정보:', room);
-    console.log('🆔 요청자 ID:', data.playerId);
-    console.log('🏠 방장 ID:', room ? room.hostId : 'null');
-    
-    if (!room) {
-        console.log('❌ 방을 찾을 수 없음');
-        return { error: '존재하지 않는 방입니다' };
-    }
-    
-    if (room.hostId !== data.playerId) {
-        console.log('❌ 권한 없음 - 방장이 아님');
-        console.log('방장 ID:', room.hostId, '요청자 ID:', data.playerId);
-        return { error: '게임을 시작할 권한이 없습니다' };
-    }
-    
-    if (!room.guestId) {
-        console.log('❌ 참가자 없음');
-        return { error: '상대방이 접속하지 않았습니다' };
-    }
-    
-    room.gameStarted = true;
-    room.lastActivity = Date.now();
-    
-    // 참가자에게 게임 시작 알림
-    addMessageToPlayer(room.guestId, {
-        type: 'game_start',
-        roomCode: data.roomCode
-    });
-    
-    console.log('✅ 게임 시작 성공:', data.roomCode);
-    
-    return {
-        success: true,
-        type: 'game_start',
-        roomCode: data.roomCode
-    };
-}
-
-function handleMove(data) {
-    console.log('♟️ 이동 요청 수신:', data);
-    console.log('🗂️ 현재 전체 방 목록:', Array.from(gameRooms.keys()));
-    console.log('🔍 찾는 방 코드:', data.roomCode);
-    
-    let room = gameRooms.get(data.roomCode);
-    
-    // 방이 없으면 임시로 복구 시도 (Vercel Cold Start 대응)
-    if (!room && data.roomCode && data.playerId) {
-        console.log('🔄 방이 사라짐 감지 - 임시 방 복구 시도');
-        room = attemptRoomRecovery(data.roomCode, data.playerId, data.roomInfo);
-    }
-    
-    console.log('🏠 방 정보:', room);
-    
-    if (!room) {
-        console.log('❌ 방을 찾을 수 없음 (복구 실패)');
-        console.log('🗂️ 사용 가능한 방들:', Array.from(gameRooms.entries()));
-        return { error: '게임 세션이 만료되었습니다. 새로운 게임을 시작해주세요.' };
-    }
-    
-    if (!room.gameStarted) {
-        console.log('❌ 게임이 시작되지 않음');
-        return { error: '게임이 진행중이 아닙니다' };
-    }
-    
-    room.lastActivity = Date.now();
-    
-    // 상대방에게 이동 정보 전송
-    const opponentId = room.hostId === data.playerId ? room.guestId : room.hostId;
-    console.log('👥 플레이어 정보:');
-    console.log('- 이동한 플레이어:', data.playerId);
-    console.log('- 방장 ID:', room.hostId);
-    console.log('- 참가자 ID:', room.guestId);
-    console.log('- 상대방 ID:', opponentId);
-    
-    const moveMessage = {
-        type: 'game_move',
-        fromRow: data.fromRow,
-        fromCol: data.fromCol,
-        toRow: data.toRow,
-        toCol: data.toCol,
-        capturedPiece: data.capturedPiece,
-        nextPlayer: data.nextPlayer
-    };
-    
-    addMessageToPlayer(opponentId, moveMessage);
-    
-    console.log('✅ 이동 메시지 전송 완료:', `(${data.fromRow},${data.fromCol}) → (${data.toRow},${data.toCol})`);
-    console.log('📨 전송된 메시지:', moveMessage);
-    
-    return { success: true };
-}
-
-function attemptRoomRecovery(roomCode, playerId, roomInfo) {
-    console.log('🚑 방 복구 시도:', roomCode, '플레이어:', playerId);
-    console.log('📋 방 정보:', roomInfo);
-    
-    // 클라이언트에서 제공한 정보로 방 복구
-    const recoveredRoom = {
-        code: roomCode,
-        hostId: null,
-        hostName: roomInfo?.hostName || '방장',
-        guestId: null, 
-        guestName: roomInfo?.guestName || '참가자',
-        gameStarted: true, // 이미 게임이 진행중이었다고 가정
-        lastActivity: Date.now(),
-        createdAt: Date.now(),
-        recovered: true // 복구된 방임을 표시
-    };
-    
-    // 요청자가 방장인지 참가자인지 구분하여 설정
-    if (roomInfo?.isHost) {
-        recoveredRoom.hostId = playerId;
-        // 참가자 ID는 알 수 없으므로 임시 ID 생성
-        recoveredRoom.guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
-    } else if (roomInfo?.isGuest) {
-        recoveredRoom.guestId = playerId;
-        // 방장 ID는 알 수 없으므로 임시 ID 생성
-        recoveredRoom.hostId = 'host_' + Math.random().toString(36).substr(2, 9);
-    } else {
-        // 정보가 없으면 요청자를 방장으로 설정
-        recoveredRoom.hostId = playerId;
-        recoveredRoom.guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
-    }
-    
-    gameRooms.set(roomCode, recoveredRoom);
-    
-    // 메시지 큐도 초기화
-    if (!playerMessages.has(playerId)) {
-        playerMessages.set(playerId, []);
-    }
-    if (!playerMessages.has(recoveredRoom.hostId)) {
-        playerMessages.set(recoveredRoom.hostId, []);
-    }
-    if (!playerMessages.has(recoveredRoom.guestId)) {
-        playerMessages.set(recoveredRoom.guestId, []);
-    }
-    
-    console.log('✅ 방 복구 완료:', recoveredRoom);
-    
-    // 복구 알림 메시지를 양쪽 플레이어에게 전송
-    const recoveryMessage = {
-        type: 'room_recovered',
-        message: '게임이 복구되었습니다. 계속 진행하세요.',
-        roomCode: roomCode
-    };
-    
-    addMessageToPlayer(recoveredRoom.hostId, recoveryMessage);
-    addMessageToPlayer(recoveredRoom.guestId, recoveryMessage);
-    
-    return recoveredRoom;
-}
-
-function addMessageToPlayer(playerId, message) {
-    if (!playerMessages.has(playerId)) {
-        playerMessages.set(playerId, []);
-    }
-    const messages = playerMessages.get(playerId);
-    messages.push(message);
-    console.log('📨 메시지 추가:', playerId, message.type);
-}
-
-function getPlayerMessages(playerId) {
-    const messages = playerMessages.get(playerId) || [];
-    playerMessages.set(playerId, []); // 메시지 읽고 나면 초기화
-    console.log('📬 메시지 조회:', playerId, '개수:', messages.length);
+    console.log('📬 메시지 조회:', roomCode, '개수:', messages.length);
     return { messages: messages };
 }
 
@@ -368,30 +151,26 @@ const players = new Map();
 
 // 5자리 랜덤 코드 생성
 function generateRoomCode() {
-    let code;
-    do {
-        code = Math.floor(10000 + Math.random() * 90000).toString();
-    } while (gameRooms.has(code)); // 중복 방지
-    return code;
+    return Math.floor(10000 + Math.random() * 90000).toString();
 }
 
-// 주기적으로 비활성 방 정리 (30분 이상 비활성)
+// 주기적으로 오래된 메시지 정리 (10분마다)
 setInterval(() => {
     const now = Date.now();
-    const maxInactiveTime = 30 * 60 * 1000; // 30분
+    const maxAge = 10 * 60 * 1000; // 10분
     
-    for (const [roomCode, room] of gameRooms.entries()) {
-        if (now - room.lastActivity > maxInactiveTime) {
-            console.log('🧹 비활성 방 정리:', roomCode);
-            gameRooms.delete(roomCode);
-            // 관련 메시지도 정리
-            if (room.hostId) playerMessages.delete(room.hostId);
-            if (room.guestId) playerMessages.delete(room.guestId);
+    for (const [roomCode, messages] of activeMessages.entries()) {
+        // 오래된 메시지 필터링
+        const recentMessages = messages.filter(msg => now - msg.timestamp < maxAge);
+        if (recentMessages.length === 0) {
+            activeMessages.delete(roomCode);
+        } else {
+            activeMessages.set(roomCode, recentMessages);
         }
     }
     
-    console.log('📊 현재 활성 방 개수:', gameRooms.size);
-}, 5 * 60 * 1000); // 5분마다 실행
+    console.log('📊 현재 활성 방 개수:', activeMessages.size);
+}, 10 * 60 * 1000); // 10분마다 실행
 
 // WebSocket 연결 처리
 wss.on('connection', (ws) => {
