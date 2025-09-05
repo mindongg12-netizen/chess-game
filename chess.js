@@ -274,7 +274,7 @@ class ChessGame {
         this.updateCapturedPieces();
     }
     
-    handleSquareClick(row, col) {
+    async handleSquareClick(row, col) {
         if (!this.gameStarted || !this.isGameInProgress) {
             console.log('⚠️ 게임이 시작되지 않음 또는 진행중이 아님');
             return;
@@ -324,7 +324,7 @@ class ChessGame {
                 console.log('🎯 이동 시도:', `(${this.selectedSquare.row},${this.selectedSquare.col}) → (${row},${col})`);
                 if (this.isValidMove(this.selectedSquare.row, this.selectedSquare.col, row, col)) {
                     console.log('✅ 유효한 이동');
-                    this.makeMove(this.selectedSquare.row, this.selectedSquare.col, row, col);
+                    await this.makeMove(this.selectedSquare.row, this.selectedSquare.col, row, col);
                     this.selectedSquare = null;
                     this.clearHighlights();
                     this.switchPlayer();
@@ -436,7 +436,7 @@ class ChessGame {
         return true;
     }
     
-    makeMove(fromRow, fromCol, toRow, toCol) {
+    async makeMove(fromRow, fromCol, toRow, toCol) {
         const piece = this.board[fromRow][fromCol];
         const capturedPiece = this.board[toRow][toCol];
         
@@ -452,11 +452,6 @@ class ChessGame {
             console.log('🔥 Firebase 이동 전송:', `(${fromRow},${fromCol}) → (${toRow},${toCol})`);
             
             try {
-                // 잡힌 기물 처리
-                if (capturedPiece) {
-                    this.capturedPieces[capturedPiece.color].push(capturedPiece);
-                }
-                
                 const nextPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
                 
                 // Firebase 업데이트
@@ -539,21 +534,21 @@ class ChessGame {
         }
     }
     
-    handleTimeOut() {
+    async handleTimeOut() {
         this.stopTurnTimer();
-        this.makeRandomMove();
+        await this.makeRandomMove();
         this.selectedSquare = null;
         this.clearHighlights();
         this.switchPlayer();
         this.updateGameStatus();
     }
     
-    makeRandomMove() {
+    async makeRandomMove() {
         const validMoves = this.getAllValidMoves(this.currentPlayer);
         
         if (validMoves.length > 0) {
             const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
-            this.makeMove(randomMove.fromRow, randomMove.fromCol, randomMove.toRow, randomMove.toCol);
+            await this.makeMove(randomMove.fromRow, randomMove.fromCol, randomMove.toRow, randomMove.toCol);
         }
     }
     
