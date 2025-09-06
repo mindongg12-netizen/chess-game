@@ -30,6 +30,9 @@ class ChessGame {
         this.playerId = this.generatePlayerId();
         this.gameRef = null;
         this.listeners = [];
+        
+        // 다크모드 상태
+        this.isDarkMode = localStorage.getItem('darkMode') === 'true';
 
         // Unicode chess pieces
         this.pieces = {
@@ -58,6 +61,9 @@ class ChessGame {
         document.getElementById('roomCodeInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.joinRoom();
         });
+        
+        // 다크모드 토글 이벤트 리스너
+        document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
         document.getElementById('roomCodeInput').addEventListener('input', (e) => {
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
         });
@@ -74,6 +80,9 @@ class ChessGame {
                 console.log('🔥 Firebase Connection Complete (Event)');
             });
         }
+        
+        // 초기 테마 설정
+        this.initializeTheme();
     }
 
     async startGame() {
@@ -1045,6 +1054,56 @@ class ChessGame {
 
     generatePlayerId() {
         return 'player_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // 다크모드 관련 함수들
+    initializeTheme() {
+        // 저장된 테마 설정 적용
+        if (this.isDarkMode) {
+            this.enableDarkMode();
+        } else {
+            this.enableLightMode();
+        }
+        console.log('🎨 초기 테마 설정 완료:', this.isDarkMode ? '다크모드' : '라이트모드');
+    }
+
+    toggleTheme() {
+        this.isDarkMode = !this.isDarkMode;
+        
+        if (this.isDarkMode) {
+            this.enableDarkMode();
+        } else {
+            this.enableLightMode();
+        }
+        
+        // 로컬 스토리지에 설정 저장
+        localStorage.setItem('darkMode', this.isDarkMode.toString());
+        
+        console.log('🎨 테마 전환:', this.isDarkMode ? '다크모드' : '라이트모드');
+    }
+
+    enableDarkMode() {
+        const lightTheme = document.getElementById('lightTheme');
+        const darkTheme = document.getElementById('darkTheme');
+        const themeIcon = document.querySelector('.theme-icon');
+        
+        if (lightTheme) lightTheme.disabled = true;
+        if (darkTheme) darkTheme.disabled = false;
+        if (themeIcon) themeIcon.textContent = '☀️';
+        
+        console.log('🌙 다크모드 활성화');
+    }
+
+    enableLightMode() {
+        const lightTheme = document.getElementById('lightTheme');
+        const darkTheme = document.getElementById('darkTheme');
+        const themeIcon = document.querySelector('.theme-icon');
+        
+        if (lightTheme) lightTheme.disabled = false;
+        if (darkTheme) darkTheme.disabled = true;
+        if (themeIcon) themeIcon.textContent = '🌙';
+        
+        console.log('☀️ 라이트모드 활성화');
     }
 }
 

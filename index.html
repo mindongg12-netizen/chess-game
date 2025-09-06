@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Online체스</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" id="lightTheme">
+    <link rel="stylesheet" href="style(dark mode).css" id="darkTheme" disabled>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -12,6 +13,13 @@
     <script src="firebase-config.js"></script>
 </head>
 <body>
+    <!-- 다크모드 토글 버튼 -->
+    <div class="theme-toggle-container">
+        <button id="themeToggle" class="theme-toggle-btn" title="다크모드 전환">
+            <span class="theme-icon">🌙</span>
+        </button>
+    </div>
+
     <div class="container">
         <header>
             <h1>Online Chess Game</h1>
