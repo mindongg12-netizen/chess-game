@@ -597,16 +597,16 @@ class ChessGame {
             }
             console.log('🔥 Game state update received:', gameData);
             
-            // Update player names
-            this.hostPlayerName = gameData.hostName || 'Host';
+            // 플레이어 이름 업데이트
+            this.hostPlayerName = gameData.hostName || '방장';
             if (gameData.guestId && !this.guestPlayerName) {
                 this.guestPlayerName = gameData.guestName;
+                console.log(`🎉 게스트 입장: ${this.guestPlayerName}`);
+                
+                // 방장의 경우 게임 시작 버튼 활성화
                 if (this.isRoomHost) {
-                     const statusElement = document.getElementById('gameStatus');
-                     if (statusElement) {
-                        statusElement.textContent = 'Opponent has joined! Press Start Game.';
-                        statusElement.style.color = '#28a745';
-                     }
+                    console.log('🔄 방장 UI 업데이트 - 게임 시작 버튼 활성화');
+                    this.showWaitingState(); // 게임 시작 버튼 상태 업데이트
                 }
             }
             this.updatePlayerNames();
@@ -822,16 +822,34 @@ class ChessGame {
     }
 
     async startActualGame() {
-        if (!this.isRoomHost || !this.gameRef) return;
-        console.log('🔥 Starting game via Firebase');
+        if (!this.isRoomHost || !this.gameRef) {
+            console.log('⚠️ 방장이 아니거나 게임 참조가 없음');
+            return;
+        }
+        
+        // 상대방(게스트)이 입장했는지 확인
+        if (!this.guestPlayerName) {
+            console.log('⚠️ 상대방이 아직 입장하지 않음');
+            alert('⚠️ 상대방이 들어올 때까지 기다려주세요!\n\n게임 코드를 공유하고 상대방이 입장한 후 게임을 시작할 수 있습니다.');
+            return;
+        }
+        
+        console.log('🔥 Firebase를 통한 게임 시작');
+        console.log('👥 플레이어 확인:');
+        console.log('  - 방장:', this.hostPlayerName);
+        console.log('  - 게스트:', this.guestPlayerName);
+        
         try {
             await this.gameRef.update({
                 gameStarted: true,
-                isGameInProgress: true, // Also set this to ensure state is correct
+                isGameInProgress: true,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
+            
+            console.log('✅ 게임 시작 완료');
         } catch (error) {
-            console.error('❌ Failed to start game:', error);
+            console.error('❌ 게임 시작 실패:', error);
+            alert('게임 시작에 실패했습니다: ' + error.message);
         }
     }
 
@@ -840,13 +858,40 @@ class ChessGame {
         const statusElement = document.getElementById('gameStatus');
         const startBtn = document.getElementById('startGameBtnInRoom');
         
-        if (playerElement) playerElement.textContent = 'Waiting';
+        if (playerElement) playerElement.textContent = '대기중';
         
         if (this.isRoomHost) {
-            if (statusElement) statusElement.textContent = '상대방을 기다려주세요! 코드를 공유하세요!';
-            if (startBtn) startBtn.style.display = 'inline-block';
+            // 상대방이 들어왔는지 확인
+            if (this.guestPlayerName) {
+                // 상대방이 들어온 경우
+                if (statusElement) {
+                    statusElement.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
+                    statusElement.style.color = '#28a745';
+                }
+                if (startBtn) {
+                    startBtn.style.display = 'inline-block';
+                    startBtn.disabled = false;
+                    startBtn.textContent = '게임 시작';
+                }
+                console.log('✅ 상대방 입장 완료 - 게임 시작 가능');
+            } else {
+                // 상대방이 아직 안 들어온 경우
+                if (statusElement) {
+                    statusElement.textContent = '상대방을 기다려주세요! 코드를 공유하세요!';
+                    statusElement.style.color = '#666';
+                }
+                if (startBtn) {
+                    startBtn.style.display = 'inline-block';
+                    startBtn.disabled = true;
+                    startBtn.textContent = '대기중...';
+                }
+                console.log('⏳ 상대방 입장 대기 중');
+            }
         } else if (this.isRoomGuest) {
-            if (statusElement) statusElement.textContent = '방장이 게임을 시작할 때까지 기다려주세요!';
+            if (statusElement) {
+                statusElement.textContent = '방장이 게임을 시작할 때까지 기다려주세요!';
+                statusElement.style.color = '#666';
+            }
             if (startBtn) startBtn.style.display = 'none';
         }
         
