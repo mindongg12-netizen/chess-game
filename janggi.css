@@ -313,6 +313,7 @@ header h1 {
     border-right: 1px solid #8B4513;
     border-bottom: 1px solid #8B4513;
     cursor: pointer;
+    overflow: hidden; /* 말이 영역을 벗어나지 않도록 */
 }
 
 /* Remove outer borders to not double up with the container border */
@@ -380,6 +381,8 @@ header h1 {
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
     box-shadow: 0 3px 6px rgba(0,0,0,0.2), inset 0 2px 2px rgba(255,255,255,0.3);
     transition: all 0.2s ease;
+    z-index: 10; /* 말이 항상 위에 표시되도록 */
+    pointer-events: auto; /* 클릭 이벤트 정상 작동 */
 }
 .piece:hover {
     transform: translate(-50%, -50%) scale(1.05);

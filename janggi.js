@@ -162,6 +162,14 @@
         this.capturedPieces = { cho: [], han: [] };
         this.currentTurnTime = this.turnTimeLimit;
         this.isGameInProgress = false;
+        this.isMovePending = false;
+        
+        // 보드 완전히 초기화
+        const boardElement = document.getElementById('janggiboard');
+        if (boardElement) {
+            boardElement.innerHTML = '';
+        }
+        
         this.initializeBoard();
         this.renderBoard();
         this.showWaitingState();
@@ -240,13 +248,27 @@
     renderBoard() {
         const boardElement = document.getElementById('janggiboard');
         if (!boardElement) return;
+        
+        // 완전히 초기화하여 중복 말 문제 해결
         boardElement.innerHTML = '';
+        
+        // 기존 이벤트 리스너도 모두 제거
+        const existingSquares = boardElement.querySelectorAll('.square');
+        existingSquares.forEach(square => {
+            square.removeEventListener('click', square.clickHandler);
+        });
+        
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
                 const square = document.createElement('div');
                 square.className = 'square';
                 square.dataset.row = row;
                 square.dataset.col = col;
+                
+                // 기존 piece 요소들 완전히 제거
+                const existingPieces = square.querySelectorAll('.piece');
+                existingPieces.forEach(piece => piece.remove());
+                
                 const piece = this.board[row][col];
                 if (piece) {
                     const pieceElement = document.createElement('div');
@@ -254,7 +276,12 @@
                     pieceElement.textContent = this.pieces[piece.color][piece.type];
                     square.appendChild(pieceElement);
                 }
-                square.addEventListener('click', () => this.handleSquareClick(row, col));
+                
+                // 이벤트 리스너 저장하여 나중에 제거할 수 있도록 함
+                const clickHandler = () => this.handleSquareClick(row, col);
+                square.clickHandler = clickHandler;
+                square.addEventListener('click', clickHandler);
+                
                 boardElement.appendChild(square);
             }
         }
