@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online체스</title>
+    <link rel="stylesheet" href="style.css" id="lightTheme">
+    <link rel="stylesheet" href="style(dark mode).css" id="darkTheme" disabled>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+</head>
+<body>
+    <!-- 다크모드 토글 버튼 -->
+    <div class="theme-toggle-container">
+        <button id="themeToggle" class="theme-toggle-btn" title="다크모드 전환">
+            <span class="theme-icon">🌙</span>
+        </button>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Online Chess Game</h1>
+        </header>
+        
+        <div class="game-menu" id="gameMenu">
+            <div class="menu-content">
+                <h2>Made by 고성 상리초 T.Min</h2>
+                <h2>체스 게임에 오신 것을 환영합니다!</h2>
+                
+                <div class="create-room-section">
+                    <h3>방 만들기</h3>
+                    <div class="name-input-container">
+                        <input type="text" id="hostNameInput" class="name-input" placeholder="이름" maxlength="10">
+                        <button id="startGameBtn" class="start-btn">방 만들기</button>
+                    </div>
+                </div>
+                
+                <div class="divider">또는</div>
+                
+                <div class="join-room-section">
+                    <h3>방 참가하기</h3>
+                    <div class="name-input-container">
+                        <input type="text" id="guestNameInput" class="name-input" placeholder="이름" maxlength="10">
+                    </div>
+                    <div class="code-input-container">
+                        <input type="text" id="roomCodeInput" class="room-code-input" placeholder="5자리 코드 입력" maxlength="5" pattern="[0-9]{5}">
+                        <button id="joinRoomBtn" class="join-btn">참가하기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-container" id="gameContainer" style="display: none;">
+            <div class="game-info">
+                <div class="player-turn">
+                    <span id="currentPlayer">백의 차례</span>
+                </div>
+                <div class="timer-container">
+                    <div class="timer-label">남은 시간:</div>
+                    <div id="turnTimer" class="timer">40</div>
+                </div>
+                <div class="game-code-container" id="gameCodeContainer" style="display: none;">
+                    <div class="game-code-label">게임 코드:</div>
+                    <div class="game-code-display">
+                        <span id="gameCode" class="game-code">00000</span>
+                        <button id="copyCodeBtn" class="copy-btn" title="코드 복사">📋</button>
+                    </div>
+                </div>
+                <div class="game-controls">
+                    <button id="startGameBtnInRoom" class="start-game-btn" style="display: none;">게임 시작</button>
+                    <button id="resetBtn" class="reset-btn" style="display: none;">게임 재시작</button>
+                    <button id="backToMenuBtn" class="menu-btn">메인 메뉴</button>
+                </div>
+            </div>
+            
+            <div class="chess-area">
+                <div class="player-container black-player" id="blackPlayerContainer" style="display: none;">
+                    <div class="player-avatar">♛</div>
+                    <div class="player-info-side">
+                        <div class="player-name-side" id="blackPlayerName">-</div>
+                        <div class="player-role">흑말</div>
+                    </div>
+                </div>
+                
+                <div class="chessboard" id="chessboard">
+                    <!-- 체스보드가 여기에 생성됩니다 -->
+                </div>
+                
+                <div class="player-container white-player" id="whitePlayerContainer" style="display: none;">
+                    <div class="player-avatar">♕</div>
+                    <div class="player-info-side">
+                        <div class="player-name-side" id="whitePlayerName">-</div>
+                        <div class="player-role">백말</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="game-status">
+                <div id="gameStatus">게임이 진행 중입니다</div>
+                <div id="capturedPieces">
+                    <div class="captured-white">
+                        <h4>잡힌 백말:</h4>
+                        <div id="capturedWhite"></div>
+                    </div>
+                    <div class="captured-black">
+                        <h4>잡힌 흑말:</h4>
+                        <div id="capturedBlack"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="chess.js"></script>
+</body>
+</html>
