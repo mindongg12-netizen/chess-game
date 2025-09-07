@@ -327,6 +327,8 @@ header h1 {
     background-color: #8B4513;
     height: 1px;
     transform-origin: top left;
+    z-index: 1; /* piece보다 낮은 z-index로 설정 */
+    pointer-events: none; /* 클릭 이벤트 방해하지 않도록 */
 }
 
 /* Top Palace Diagonal Lines */

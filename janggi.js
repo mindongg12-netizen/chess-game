@@ -171,6 +171,12 @@
         }
         
         this.initializeBoard();
+        
+        // (4,4) 위치 특별 정리
+        setTimeout(() => {
+            this.cleanupSpecificSquare(4, 4);
+        }, 100);
+        
         this.renderBoard();
         this.showWaitingState();
     }
@@ -265,6 +271,11 @@
                 square.dataset.row = row;
                 square.dataset.col = col;
                 
+                // 특정 위치 (4,4) 디버깅
+                if (row === 4 && col === 4) {
+                    console.log(`🔍 Rendering position (4,4), piece:`, this.board[row][col]);
+                }
+                
                 // 기존 piece 요소들 완전히 제거
                 const existingPieces = square.querySelectorAll('.piece');
                 existingPieces.forEach(piece => piece.remove());
@@ -275,6 +286,11 @@
                     pieceElement.className = `piece ${piece.color}`;
                     pieceElement.textContent = this.pieces[piece.color][piece.type];
                     square.appendChild(pieceElement);
+                    
+                    // 특정 위치 (4,4) 디버깅
+                    if (row === 4 && col === 4) {
+                        console.log(`✅ Piece added to (4,4):`, pieceElement);
+                    }
                 }
                 
                 // 이벤트 리스너 저장하여 나중에 제거할 수 있도록 함
@@ -285,7 +301,41 @@
                 boardElement.appendChild(square);
             }
         }
+        
+        // 렌더링 완료 후 (4,4) 위치 강제 검증
+        setTimeout(() => {
+            this.validateSpecificSquare(4, 4);
+        }, 50);
+        
         this.updateCapturedPieces();
+    }
+    
+    validateSpecificSquare(row, col) {
+        const targetSquare = document.querySelector(`.square[data-row='${row}'][data-col='${col}']`);
+        const boardPiece = this.board[row][col];
+        
+        if (targetSquare) {
+            const domPieces = targetSquare.querySelectorAll('.piece');
+            
+            if (boardPiece && domPieces.length === 0) {
+                // 보드에는 말이 있는데 DOM에는 없는 경우
+                console.log(`⚠️ Missing piece in DOM at (${row},${col}), adding:`, boardPiece);
+                const pieceElement = document.createElement('div');
+                pieceElement.className = `piece ${boardPiece.color}`;
+                pieceElement.textContent = this.pieces[boardPiece.color][boardPiece.type];
+                targetSquare.appendChild(pieceElement);
+            } else if (!boardPiece && domPieces.length > 0) {
+                // 보드에는 말이 없는데 DOM에는 있는 경우
+                console.log(`⚠️ Extra pieces in DOM at (${row},${col}), removing:`, domPieces.length);
+                domPieces.forEach(piece => piece.remove());
+            } else if (boardPiece && domPieces.length > 1) {
+                // 중복된 말들이 있는 경우
+                console.log(`⚠️ Duplicate pieces in DOM at (${row},${col}), cleaning up`);
+                domPieces.forEach((piece, index) => {
+                    if (index > 0) piece.remove(); // 첫 번째만 남기고 제거
+                });
+            }
+        }
     }
 
     async handleSquareClick(row, col) {
@@ -346,6 +396,32 @@
 
     clearHighlights() {
         document.querySelectorAll('.square').forEach(s => s.classList.remove('selected', 'valid-move', 'capture'));
+    }
+    
+    cleanupSpecificSquare(row, col) {
+        // 특정 위치의 DOM square를 강제로 정리
+        const targetSquare = document.querySelector(`.square[data-row='${row}'][data-col='${col}']`);
+        if (targetSquare) {
+            // 기존 piece 요소들 모두 제거
+            const pieces = targetSquare.querySelectorAll('.piece');
+            pieces.forEach(piece => {
+                console.log(`🧹 Removing piece from (${row},${col}):`, piece);
+                piece.remove();
+            });
+            
+            // 보드 데이터와 일치하지 않는 경우 강제 동기화
+            const boardPiece = this.board[row][col];
+            if (boardPiece && pieces.length === 0) {
+                console.log(`🔧 Adding missing piece to (${row},${col}):`, boardPiece);
+                const pieceElement = document.createElement('div');
+                pieceElement.className = `piece ${boardPiece.color}`;
+                pieceElement.textContent = this.pieces[boardPiece.color][boardPiece.type];
+                targetSquare.appendChild(pieceElement);
+            } else if (!boardPiece && pieces.length > 0) {
+                console.log(`🗑️ Removing extra pieces from (${row},${col})`);
+                pieces.forEach(piece => piece.remove());
+            }
+        }
     }
 
     // ### 장기 행마법 (핵심 로직) ###
@@ -545,6 +621,15 @@
         let gameEnded = false;
         let winner = null;
 
+        // 특정 위치 (4,4) 디버깅
+        if (toRow === 4 && toCol === 4) {
+            console.log(`🎯 Move to (4,4): piece=${piece?.type}, capturedPiece=${capturedPiece?.type}`);
+            console.log(`🎯 Board before move at (4,4):`, this.board[4][4]);
+        }
+        if (fromRow === 4 && fromCol === 4) {
+            console.log(`🔄 Move from (4,4): piece=${piece?.type}`);
+        }
+
         if (capturedPiece) {
             this.capturedPieces[capturedPiece.color].push(capturedPiece);
             if (capturedPiece.type === 'king') {
@@ -554,6 +639,17 @@
         }
         this.board[toRow][toCol] = piece;
         this.board[fromRow][fromCol] = null;
+        
+        // 특정 위치 (4,4) 디버깅 - 이동 후
+        if (toRow === 4 && toCol === 4) {
+            console.log(`✅ Board after move to (4,4):`, this.board[4][4]);
+        }
+        if (fromRow === 4 && fromCol === 4) {
+            console.log(`✅ Board after move from (4,4):`, this.board[4][4]);
+        }
+        
+        // (4,4) 위치 강제 정리
+        this.cleanupSpecificSquare(4, 4);
         
         this.renderBoard();
         
