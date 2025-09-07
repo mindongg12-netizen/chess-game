@@ -632,6 +632,8 @@
 
         if (capturedPiece) {
             this.capturedPieces[capturedPiece.color].push(capturedPiece);
+            console.log(`🎯 Piece captured: ${capturedPiece.color} ${capturedPiece.type} at (${toRow},${toCol})`);
+            console.log(`📦 Total captured pieces:`, this.capturedPieces);
             if (capturedPiece.type === 'king') {
                 gameEnded = true;
                 winner = piece.color;
@@ -706,8 +708,16 @@
         const capturedChoEl = document.getElementById('capturedCho');
         const capturedHanEl = document.getElementById('capturedHan');
         if (!this.capturedPieces) this.capturedPieces = { cho: [], han: [] };
-        capturedChoEl.innerHTML = this.capturedPieces.cho.map(p => `<span class="piece cho">${this.pieces.cho[p.type]}</span>`).join(' ');
-        capturedHanEl.innerHTML = this.capturedPieces.han.map(p => `<span class="piece han">${this.pieces.han[p.type]}</span>`).join(' ');
+        
+        // 잡힌 기물용 별도 CSS 클래스 사용하여 위치 문제 해결
+        capturedChoEl.innerHTML = this.capturedPieces.cho.map(p => 
+            `<span class="captured-piece cho">${this.pieces.cho[p.type]}</span>`
+        ).join(' ');
+        capturedHanEl.innerHTML = this.capturedPieces.han.map(p => 
+            `<span class="captured-piece han">${this.pieces.han[p.type]}</span>`
+        ).join(' ');
+        
+        console.log(`📊 Captured pieces updated - 초: ${this.capturedPieces.cho.length}, 한: ${this.capturedPieces.han.length}`);
     }
 
     // --- 이하 코드는 체스 게임과 거의 동일한 UI/온라인 로직 ---

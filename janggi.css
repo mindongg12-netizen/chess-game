@@ -433,6 +433,31 @@ header h1 {
     justify-content: center;
 }
 
+/* 잡힌 기물용 스타일 (보드 위 기물과 구분) */
+.captured-piece {
+    width: 32px;
+    height: 32px;
+    position: relative; /* absolute가 아닌 relative로 설정 */
+    border-radius: 50%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.3);
+    margin: 2px;
+}
+.captured-piece.cho {
+    background: radial-gradient(circle, #2a9d8f, #264653);
+    border: 1px solid #1a3c42;
+}
+.captured-piece.han {
+    background: radial-gradient(circle, #f77f00, #d62828);
+    border: 1px solid #a31e1e;
+}
+
 /* Responsive Design (from chess, adjusted for Janggi) */
 @media (max-width: 768px) {
     .janggiboard {
