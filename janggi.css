@@ -1,208 +1,453 @@
-/* 기본 & 라이트 모드 스타일 */
+/* General Styling from Chess Theme */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-/* 전체 레이아웃 */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* 상단 정렬 */
-    min-height: 100vh;
-    margin: 0;
-    padding: 20px;
-    background-color: #f4f1e9; /* 부드러운 배경색 */
-    box-sizing: border-box;
-    color: #333;
+    align-items: center;
+    position: relative;
 }
 
 .container {
+    max-width: 1200px;
     width: 100%;
-    max-width: 900px;
+    padding: 20px;
+}
+
+header {
     text-align: center;
+    margin-bottom: 30px;
 }
 
 header h1 {
-    font-size: 2.5rem;
-    color: #8b4513; /* 나무 느낌의 갈색 */
+    color: white;
+    font-size: 3rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    margin-bottom: 10px;
+}
+
+/* Dark Mode Toggle Button (from chess) */
+.theme-toggle-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.theme-toggle-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.theme-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.theme-icon {
+    font-size: 1.5rem;
+}
+
+/* Game Menu Styling (from chess) */
+.game-menu {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+.menu-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 60px 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.menu-content h2 {
+    color: #333;
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+}
+
+.create-room-section, .join-room-section {
     margin-bottom: 20px;
 }
 
-/* 게임 메뉴 (방 만들기/참가) */
-.game-menu {
-    background-color: #fff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+.create-room-section h3, .join-room-section h3 {
+    color: #333;
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+}
+
+.name-input-container, .code-input-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
 }
 
 .name-input, .room-code-input {
-    padding: 10px;
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    border: 2px solid #dee2e6;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    width: 200px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.name-input:focus {
+    outline: none;
+    border-color: #ff6b6b;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.room-code-input {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+    font-weight: bold;
+    width: 150px;
+}
+
+.room-code-input:focus {
+    outline: none;
+    border-color: #4ecdc4;
+    box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+}
+
+.divider {
+    margin: 25px 0;
     font-size: 1rem;
-    border: 2px solid #ccc;
-    border-radius: 5px;
-    margin: 5px;
+    color: #666;
 }
 
 .start-btn, .join-btn {
-    padding: 10px 20px;
-    font-size: 1rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    background-color: #5a9bd5;
     color: white;
-    transition: background-color 0.3s;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-.start-btn:hover, .join-btn:hover {
-    background-color: #4a8ac5;
+.start-btn {
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
 }
 
-/* 게임 컨테이너 */
+.start-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+}
+
+.join-btn {
+    background: linear-gradient(45deg, #4ecdc4, #44a08d);
+    box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+    font-weight: bold;
+}
+
+.join-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(78, 205, 196, 0.4);
+}
+
+/* Game Container and Info Bar (from chess) */
 .game-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 15px;
+    max-width: 1000px;
+    margin: 0 auto;
 }
+
+.game-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px 30px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 968px;
+}
+
+.player-turn, .timer, .game-code, .game-controls {
+    flex: 1;
+    text-align: center;
+}
+
+.player-turn { font-size: 1.2rem; font-weight: bold; color: #333; }
+.timer-container, .game-code-container { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.timer-label, .game-code-label { font-size: 0.9rem; color: #666; }
+
+.timer {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    background: linear-gradient(135deg, #ffffff, #f0f0f0);
+    padding: 10px 20px;
+    border-radius: 15px;
+    border: 2px solid #ddd;
+    min-width: 80px;
+}
+
+.timer.warning {
+    color: #ff4444;
+    border-color: #ff4444;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    50% { transform: scale(1.05); }
+}
+
+.game-code-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 8px 15px;
+    border-radius: 12px;
+}
+
+.game-code {
+    font-size: 1.4rem;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+}
+
+.copy-btn {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.game-controls { display: flex; gap: 15px; justify-content: center; }
+.start-game-btn, .reset-btn, .menu-btn {
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.start-game-btn { background: linear-gradient(45deg, #ff6b6b, #ff8e8e); }
+.reset-btn, .menu-btn { background: linear-gradient(45deg, #4ecdc4, #44a08d); }
+
+/* JANGGI-SPECIFIC STYLING starts here */
 
 .janggi-area {
     display: flex;
     align-items: center;
     gap: 20px;
-}
-
-/* 장기판 스타일 */
-.janggiboard {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    grid-template-rows: repeat(10, 1fr);
-    width: 540px;
-    height: 600px;
-    background-color: #e3c16f; /* 장기판 나무 색 */
-    border: 2px solid #5d3a1a;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-}
-
-.square {
-    position: relative;
-    /* 테두리를 이용해 선 그리기 */
-    border-right: 1px solid #5d3a1a;
-    border-bottom: 1px solid #5d3a1a;
-}
-
-/* 마지막 열과 행의 테두리 제거하여 겹치지 않게 함 */
-.square:nth-child(9n) { border-right: none; }
-.square:nth-child(n+82) { border-bottom: none; }
-
-
-/* 궁성 대각선 그리기 */
-.square::before, .square::after {
-    content: '';
-    position: absolute;
-    width: 141.42%; /* 대각선 길이 (루트2) */
-    height: 1px;
-    background-color: #5d3a1a;
-    transform-origin: top left;
-}
-
-/* \ 대각선 */
-.square:nth-child(4)::before,  /* 한나라 궁성 좌상 */
-.square:nth-child(24)::before, /* 한나라 궁성 우하 */
-.square:nth-child(67)::before, /* 초나라 궁성 좌상 */
-.square:nth-child(87)::before { /* 초나라 궁성 우하 */
-    transform: rotate(45deg) scaleX(1.05);
-}
-
-/* / 대각선 */
-.square:nth-child(6)::before,   /* 한나라 궁성 우상 */
-.square:nth-child(22)::before,  /* 한나라 궁성 좌하 */
-.square:nth-child(69)::before,  /* 초나라 궁성 우상 */
-.square:nth-child(85)::before { /* 초나라 궁성 좌하 */
-    transform-origin: top right;
-    right: 0;
-    transform: rotate(-45deg) scaleX(1.05);
-}
-
-
-/* 기물(Piece) 스타일 */
-.piece {
-    width: 85%;
-    height: 85%;
-    margin: 7.5%;
-    border-radius: 50%;
-    display: flex;
     justify-content: center;
-    align-items: center;
-    font-size: 2rem;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.piece:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-/* 초나라(cho) 기물 스타일 */
-.piece.cho {
-    background-color: #008000; /* 초록색 */
-    color: white;
-    border: 2px solid #004d00;
-}
-
-/* 한나라(han) 기물 스타일 */
-.piece.han {
-    background-color: #dc143c; /* 빨간색 */
-    color: white;
-    border: 2px solid #8b0000;
-}
-
-/* 기물 선택/이동 가능 표시 */
-.square.selected .piece {
-    box-shadow: 0 0 15px 5px #ffdd00;
-    transform: scale(1.05);
-}
-.square.valid-move {
-    background-color: rgba(0, 255, 0, 0.3);
-    border-radius: 50%;
-}
-.square.capture {
-    background-color: rgba(255, 0, 0, 0.4);
-    border-radius: 50%;
-}
-
-/* 게임 정보 및 플레이어 표시 */
-.game-info {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    width: 100%;
-    max-width: 600px;
-    margin-bottom: 10px;
-}
+/* Player Info Containers (styled like chess) */
 .player-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px;
-    font-size: 1.2rem;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    min-width: 120px;
 }
-.player-avatar {
-    font-size: 3rem;
-    font-weight: bold;
-}
+.player-container.han-player { border: 2px solid #dc143c; order: 1; }
+.player-container.cho-player { border: 2px solid #008000; order: 3; }
+.player-avatar { font-size: 2.5rem; font-weight: bold; }
 .han-player .player-avatar { color: #dc143c; }
 .cho-player .player-avatar { color: #008000; }
+.player-name-side { font-size: 1.1rem; font-weight: bold; color: #333; }
+.player-role { font-size: 0.9rem; color: #666; }
 
-/* 잡힌 기물 표시 */
+/* Janggi Board Styling (new style matching the theme) */
+.janggiboard {
+    display: grid;
+    grid-template-columns: repeat(9, 60px);
+    grid-template-rows: repeat(10, 60px);
+    width: 542px; /* 60px * 9 + 2px border */
+    height: 602px; /* 60px * 10 + 2px border */
+    background-color: #f0d9b5; /* Light wood color from chess board */
+    border: 4px solid #8B4513; /* Dark wood border from chess board */
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    order: 2;
+}
+
+.square {
+    position: relative;
+    border-right: 1px solid #8B4513;
+    border-bottom: 1px solid #8B4513;
+    cursor: pointer;
+}
+
+/* Remove outer borders to not double up with the container border */
+.square:nth-child(9n) { border-right: none; }
+.square:nth-child(n+82) { border-bottom: none; }
+
+/* Palace lines styling - using nth-child selectors for accuracy */
+.square::before, .square::after {
+    content: '';
+    position: absolute;
+    background-color: #8B4513;
+    height: 1px;
+    transform-origin: top left;
+}
+
+/* Top Palace Diagonal Lines */
+.square:nth-child(4)::before, .square:nth-child(24)::before { 
+    transform: rotate(45deg) scaleX(1.414); 
+}
+.square:nth-child(6)::after, .square:nth-child(22)::after { 
+    right: 0; 
+    transform-origin: top right; 
+    transform: rotate(-45deg) scaleX(1.414); 
+}
+
+/* Bottom Palace Diagonal Lines */
+.square:nth-child(67)::before, .square:nth-child(87)::before { 
+    transform: rotate(45deg) scaleX(1.414); 
+}
+.square:nth-child(69)::after, .square:nth-child(85)::after { 
+    right: 0; 
+    transform-origin: top right; 
+    transform: rotate(-45deg) scaleX(1.414); 
+}
+
+/* Highlighting moves (from chess) */
+.square.selected .piece {
+    box-shadow: 0 0 15px 5px #ffdd00;
+}
+.square.valid-move {
+    background-color: rgba(144, 238, 144, 0.7) !important;
+    border-radius: 50%;
+}
+.square.capture {
+    background-color: rgba(255, 182, 193, 0.7) !important;
+    border-radius: 50%;
+}
+
+/* Janggi Piece Styling (new style matching the theme) */
+.piece {
+    width: 52px;
+    height: 52px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2), inset 0 2px 2px rgba(255,255,255,0.3);
+    transition: all 0.2s ease;
+}
+.piece:hover {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.3), inset 0 2px 2px rgba(255,255,255,0.3);
+}
+
+.piece.cho {
+    background: radial-gradient(circle, #2a9d8f, #264653);
+    border: 2px solid #1a3c42;
+}
+.piece.han {
+    background: radial-gradient(circle, #f77f00, #d62828);
+    border: 2px solid #a31e1e;
+}
+
+/* Game Status & Captured Pieces (from chess) */
+.game-status {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 100%;
+    max-width: 968px;
+}
+#gameStatus {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+}
 #capturedPieces {
     display: flex;
     justify-content: space-around;
-    width: 100%;
-    min-height: 50px;
+}
+.captured-cho h4, .captured-han h4 {
+    color: #555;
+    margin-bottom: 10px;
 }
 #capturedCho, #capturedHan {
+    min-height: 30px;
     font-size: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+}
+
+/* Responsive Design (from chess, adjusted for Janggi) */
+@media (max-width: 768px) {
+    .janggiboard {
+        grid-template-columns: repeat(9, 38px);
+        grid-template-rows: repeat(10, 38px);
+        width: 344px; /* 38*9 + 2 */
+        height: 382px; /* 38*10 + 2 */
+    }
+    .piece {
+        width: 34px;
+        height: 34px;
+        font-size: 1.2rem;
+    }
+    .janggi-area {
+        flex-direction: column;
+        gap: 15px;
+    }
+    .player-container.han-player { order: 1; }
+    .janggiboard { order: 2; }
+    .player-container.cho-player { order: 3; }
+
+    .game-info { flex-direction: column; gap: 15px; }
 }

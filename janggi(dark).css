@@ -1,145 +1,536 @@
-/* 다크 모드 스타일 */
+/* GyeonggiCheonnyeonBatang체 적용 */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* --- CSS Variable Definitions (from Chess Dark Mode Theme) --- */
+:root {
+    --font-primary: 'Poppins', sans-serif;
+    
+    --color-bg-start: #1D2B64;
+    --color-bg-end: #0c0f20;
+    
+    --color-surface-bg: rgba(255, 255, 255, 0.1);
+    --color-surface-border: rgba(255, 255, 255, 0.2);
+    --color-surface-shadow: rgba(0, 0, 0, 0.25);
+    
+    --color-text-primary: #f0f0f0;
+    --color-text-secondary: #a0a0c0;
+
+    --color-accent-primary: #f9a826; /* Create Room */
+    --color-accent-primary-dark: #f57f17;
+    --color-accent-secondary: #26a69a; /* Join Room */
+    --color-accent-secondary-dark: #00897b;
+    --color-accent-danger: #e53935; /* Han pieces, warnings */
+    
+    /* Board and Piece Colors */
+    --board-bg: #D2B48C; /* Tan color for the board surface */
+    --board-lines: #4a382b; /* Dark brown for lines and border */
+    --piece-han-start: #e53935; /* Red gradient for Han */
+    --piece-han-end: #b71c1c;
+    --piece-cho-start: #009688; /* Teal gradient for Cho */
+    --piece-cho-end: #00695C;
+
+    /* Highlight Colors */
+    --highlight-selected: rgba(249, 168, 38, 0.6);
+    --highlight-valid: rgba(38, 166, 154, 0.5);
+    --highlight-capture: rgba(229, 57, 53, 0.6);
+    
+    --shadow-medium: 0 8px 30px rgba(0,0,0,0.2);
+}
+
+/* --- Base Styles (from Chess Dark Mode) --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
 body {
-    background-color: #121212;
-    color: #e0e0e0;
+    font-family: var(--font-primary);
+    background: linear-gradient(135deg, var(--color-bg-start), var(--color-bg-end));
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--color-text-primary);
 }
 
 .container {
-    background-color: #1e1e1e;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    max-width: 1200px;
+    width: 100%;
+    padding: 20px;
 }
 
 header h1 {
-    color: #bb86fc; /* 다크모드 강조색 */
+    font-size: 3.5rem;
+    font-weight: 700;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    margin-bottom: 40px;
+    text-align: center;
 }
 
-/* 게임 메뉴 */
-.game-menu h2 {
-    color: #e0e0e0;
-}
+ /* --- Game Menu (Glassmorphism Style) --- */
+ .game-menu {
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     min-height: 400px;
+ }
+ 
+ .menu-content {
+     background: var(--color-surface-bg);
+     padding: 60px 40px;
+     border-radius: 20px;
+     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+     text-align: center;
+     backdrop-filter: blur(10px);
+     border: 1px solid var(--color-surface-border);
+ }
+ 
+ .menu-content h2 {
+     color: var(--color-text-primary);
+     font-size: 1.8rem;
+     margin-bottom: 30px;
+ }
+ 
+ .create-room-section, .join-room-section {
+     margin-bottom: 20px;
+ }
+ 
+ .create-room-section h3, .join-room-section h3 {
+     color: var(--color-text-primary);
+     font-size: 1.3rem;
+     margin-bottom: 15px;
+ }
+ 
+ .name-input-container, .code-input-container {
+     display: flex;
+     gap: 10px;
+     align-items: center;
+     justify-content: center;
+     flex-wrap: wrap;
+     margin-bottom: 15px;
+ }
+ 
+ .divider {
+     margin: 25px 0;
+     font-size: 1rem;
+     color: var(--color-text-secondary);
+ }
 
-.game-menu h3 {
-    color: #bb86fc;
-    border-bottom-color: #bb86fc;
-}
-
+/* Inputs and Buttons */
 .name-input, .room-code-input {
-    background-color: #333;
-    border-color: #555;
-    color: #e0e0e0;
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    border: 2px solid var(--color-surface-border);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    text-align: center;
+    width: 200px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    color: var(--color-text-primary);
 }
 
-.start-btn, .join-btn {
-    background: linear-gradient(135deg, #bb86fc, #a764fc);
-    color: #121212;
+.name-input:focus {
+    outline: none;
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 4px 15px rgba(249, 168, 38, 0.3);
 }
 
-.start-btn:hover, .join-btn:hover {
-    background: linear-gradient(135deg, #a764fc, #9c4dfc);
+.room-code-input {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+    font-weight: bold;
+    width: 150px;
 }
 
-.divider {
-    color: #666;
+.room-code-input:focus {
+    outline: none;
+    border-color: var(--color-accent-secondary);
+    box-shadow: 0 4px 15px rgba(38, 166, 154, 0.3);
 }
+ .start-btn, .join-btn {
+     color: white;
+     border: none;
+     padding: 15px 40px;
+     font-size: 1.2rem;
+     border-radius: 30px;
+     cursor: pointer;
+     transition: all 0.3s ease;
+ }
+ 
+ .start-btn {
+     background: linear-gradient(45deg, var(--color-accent-primary), var(--color-accent-primary-dark));
+     box-shadow: 0 5px 15px rgba(249, 168, 38, 0.3);
+ }
+ 
+ .start-btn:hover {
+     transform: translateY(-2px);
+     box-shadow: 0 8px 25px rgba(249, 168, 38, 0.4);
+ }
+ 
+ .join-btn {
+     background: linear-gradient(45deg, var(--color-accent-secondary), var(--color-accent-secondary-dark));
+     box-shadow: 0 5px 15px rgba(38, 166, 154, 0.3);
+     font-weight: bold;
+ }
+ 
+ .join-btn:hover {
+     transform: translateY(-2px);
+     box-shadow: 0 8px 25px rgba(38, 166, 154, 0.4);
+ }
+ 
+ .game-code-display {
+     display: flex;
+     align-items: center;
+     gap: 8px;
+     background: rgba(0, 0, 0, 0.2);
+     padding: 8px 15px;
+     border-radius: 12px;
+ }
+ 
+ .game-code {
+     font-size: 1.4rem;
+     font-weight: bold;
+     font-family: 'Courier New', monospace;
+     color: var(--color-text-primary);
+ }
+ 
+ .copy-btn {
+     background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-secondary-dark));
+     color: white;
+     border: none;
+     padding: 6px 10px;
+     border-radius: 8px;
+     cursor: pointer;
+ }
+ 
+ .game-controls { 
+     display: flex; 
+     gap: 15px; 
+     justify-content: center; 
+ }
+ 
+ .start-game-btn, .reset-btn, .menu-btn {
+     color: white;
+     border: none;
+     padding: 10px 20px;
+     border-radius: 20px;
+     cursor: pointer;
+     transition: all 0.3s ease;
+ }
+ 
+ .start-game-btn { 
+     background: linear-gradient(45deg, var(--color-accent-primary), var(--color-accent-primary-dark)); 
+ }
+ 
+ .reset-btn, .menu-btn { 
+     background: linear-gradient(45deg, var(--color-accent-secondary), var(--color-accent-secondary-dark)); 
+ }
 
-/* 게임 정보 */
-.game-info {
-    background-color: #2a2a2a;
-}
+ /* --- Game Container and Info Bar --- */
+ .game-container {
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+     gap: 15px;
+     max-width: 1000px;
+     margin: 0 auto;
+ }
+ 
+ .game-info {
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     gap: 20px;
+     background: var(--color-surface-bg);
+     padding: 15px 30px;
+     border-radius: 15px;
+     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+     backdrop-filter: blur(10px);
+     border: 1px solid var(--color-surface-border);
+     width: 100%;
+     max-width: 968px;
+ }
+ 
+ .player-turn, .timer, .game-code, .game-controls {
+     flex: 1;
+     text-align: center;
+ }
+ 
+ .player-turn { 
+     font-size: 1.2rem; 
+     font-weight: bold; 
+     color: var(--color-text-primary); 
+ }
+ 
+ .timer-container, .game-code-container { 
+     display: flex; 
+     flex-direction: column; 
+     align-items: center; 
+     gap: 5px; 
+ }
+ 
+ .timer-label, .game-code-label { 
+     font-size: 0.9rem; 
+     color: var(--color-text-secondary); 
+ }
+ 
+ .timer {
+     font-size: 2rem;
+     font-weight: bold;
+     color: var(--color-text-primary);
+     background: rgba(0, 0, 0, 0.2);
+     padding: 10px 20px;
+     border-radius: 15px;
+     border: 2px solid var(--color-surface-border);
+     min-width: 80px;
+ }
+ 
+ .timer.warning {
+     color: var(--color-accent-danger);
+     border-color: var(--color-accent-danger);
+     animation: pulse 1s infinite;
+ }
+ 
+ @keyframes pulse {
+     50% { transform: scale(1.05); }
+ }
 
-#currentPlayer, .timer, #gameCode {
-    background-color: #333;
-    color: #e0e0e0;
-}
+ /* --- Janggi Game Area --- */
+ .janggi-area {
+     display: flex;
+     align-items: center;
+     gap: 20px;
+     justify-content: center;
+ }
 
-/* 버튼들 */
-.copy-btn { background-color: #03dac6; color: #121212; }
-.start-game-btn { background-color: #4caf50; }
-.reset-btn { background-color: #ff9800; color: #121212; }
-.menu-btn { background-color: #666; }
-
-/* 플레이어 컨테이너 */
+/* Player Containers */
 .player-container {
-    background-color: #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: var(--color-surface-bg);
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--color-surface-border);
+    min-width: 120px;
+}
+.player-container.han-player { 
+    border: 2px solid var(--piece-han-start); 
+    order: 1; 
+}
+.player-container.cho-player { 
+    border: 2px solid var(--piece-cho-start); 
+    order: 3; 
+}
+.player-avatar { 
+    font-size: 2.5rem; 
+    font-weight: bold; 
+}
+.han-player .player-avatar { color: var(--piece-han-start); }
+.cho-player .player-avatar { color: var(--piece-cho-start); }
+.player-name-side { 
+    font-size: 1.1rem; 
+    font-weight: bold; 
+    color: var(--color-text-primary); 
+}
+.player-role { 
+    font-size: 0.9rem; 
+    color: var(--color-text-secondary); 
 }
 
-.player-name-side {
-    color: #e0e0e0;
-}
-
-.player-role {
-    color: #aaa;
-}
-
-/* 장기판 */
-.janggiboard {
-    background-color: #4a4a4a; /* 어두운 나무 색 */
-    border-color: #222;
-}
-
-.janggiboard::before {
-    background-image:
-        repeating-linear-gradient(#666 0 2px, transparent 2px 100%),
-        repeating-linear-gradient(90deg, #666 0 2px, transparent 2px 100%);
-}
-
+ /* --- JANGGI BOARD --- */
+ .janggiboard {
+     display: grid;
+     grid-template-columns: repeat(9, 60px);
+     grid-template-rows: repeat(10, 60px);
+     width: 542px; /* 60px * 9 + 2px border */
+     height: 602px; /* 60px * 10 + 2px border */
+     background-color: var(--board-bg);
+     border: 4px solid var(--board-lines);
+     border-radius: 10px;
+     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+     order: 2;
+ }
 .square {
-    border-color: #666;
+    position: relative;
+    border-right: 1px solid var(--board-lines);
+    border-bottom: 1px solid var(--board-lines);
+    cursor: pointer;
 }
+.square:nth-child(9n) { border-right: none; }
+.square:nth-child(n+82) { border-bottom: none; }
 
-/* 게임 상태 */
-.game-status {
-    background-color: #1e1e1e;
+/* Palace Lines */
+.square::before, .square::after {
+    content: '';
+    position: absolute;
+    background-color: var(--board-lines);
+    height: 1px;
+    transform-origin: top left;
 }
+/* Top Palace */
+.square:nth-child(4)::before, .square:nth-child(24)::before { transform: rotate(45deg) scaleX(1.414); }
+.square:nth-child(6)::after, .square:nth-child(22)::after { right: 0; transform-origin: top right; transform: rotate(-45deg) scaleX(1.414); }
+/* Bottom Palace */
+.square:nth-child(67)::before, .square:nth-child(87)::before { transform: rotate(45deg) scaleX(1.414); }
+.square:nth-child(69)::after, .square:nth-child(85)::after { right: 0; transform-origin: top right; transform: rotate(-45deg) scaleX(1.414); }
 
-#gameStatus {
-    color: #e0e0e0;
+
+/* --- JANGGI PIECES --- */
+.piece {
+    width: 52px;
+    height: 52px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    user-select: none;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.2);
+    transition: all 0.2s ease;
 }
-
-.captured-cho, .captured-han {
-    background-color: #2a2a2a;
+.piece:hover {
+    transform: translate(-50%, -50%) scale(1.1);
 }
-
-.captured-cho h4, .captured-han h4 {
-    color: #e0e0e0;
-}
-
-/* 테마 토글 버튼 */
-.theme-toggle-btn {
-    background-color: #333;
-    border-color: #555;
-    color: #e0e0e0;
-}
-
-.theme-toggle-btn:hover {
-    background-color: #444;
-}
-
-/* 기물 */
-.piece.cho {
-    background-color: #03dac6; /* 다크모드 초록색 */
-    color: #121212;
-    border-color: #018786;
-}
-
 .piece.han {
-    background-color: #cf6679; /* 다크모드 빨간색 */
-    color: #121212;
-    border-color: #b00020;
+    background: radial-gradient(circle, var(--piece-han-start), var(--piece-han-end));
+    border: 2px solid var(--piece-han-end);
+}
+.piece.cho {
+    background: radial-gradient(circle, var(--piece-cho-start), var(--piece-cho-end));
+    border: 2px solid var(--piece-cho-end);
 }
 
-/* 기물 선택/이동 */
+
+/* --- HIGHLIGHTING --- */
 .square.selected .piece {
-    box-shadow: 0 0 15px 5px #f0e68c; /* 밝은 노란색 */
+    box-shadow: 0 0 15px 5px var(--highlight-selected);
 }
-.square.valid-move {
-    background-color: rgba(3, 218, 198, 0.4);
+.square.valid-move::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: var(--highlight-valid);
 }
-.square.capture {
-    background-color: rgba(207, 102, 121, 0.5);
+.square.capture::before {
+    content: '';
+    position: absolute;
+    top: 5px; left: 5px; right: 5px; bottom: 5px;
+    border: 3px solid var(--highlight-capture);
+    border-radius: 50%;
 }
 
-/* 플레이어 아바타 */
-.han-player .player-avatar { color: #cf6679; }
-.cho-player .player-avatar { color: #03dac6; }
+
+ /* --- Game Status & Captured Pieces --- */
+ .game-status {
+     background: var(--color-surface-bg);
+     padding: 15px;
+     border-radius: 15px;
+     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+     backdrop-filter: blur(10px);
+     border: 1px solid var(--color-surface-border);
+     text-align: center;
+     width: 100%;
+     max-width: 968px;
+ }
+ 
+ #gameStatus {
+     font-size: 1.1rem;
+     font-weight: bold;
+     color: var(--color-text-primary);
+     margin-bottom: 15px;
+ }
+ 
+ #capturedPieces {
+     display: flex;
+     justify-content: space-around;
+ }
+ 
+ .captured-cho h4, .captured-han h4 {
+     color: var(--color-text-secondary);
+     margin-bottom: 10px;
+ }
+ 
+ #capturedCho, #capturedHan {
+     min-height: 30px;
+     font-size: 1.5rem;
+     display: flex;
+     flex-wrap: wrap;
+     gap: 5px;
+     justify-content: center;
+ }
+ 
+ #capturedHan span { color: var(--piece-han-start); }
+ #capturedCho span { color: var(--piece-cho-start); }
+
+ /* --- Theme Toggle Button --- */
+ .theme-toggle-container {
+     position: fixed;
+     top: 20px;
+     right: 20px;
+     z-index: 1000;
+ }
+ .theme-toggle-btn {
+     background: var(--color-surface-bg);
+     border: 2px solid var(--color-surface-border);
+     border-radius: 50%;
+     width: 50px;
+     height: 50px;
+     cursor: pointer;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+     transition: all 0.3s ease;
+     backdrop-filter: blur(10px);
+     color: var(--color-text-primary);
+ }
+ .theme-toggle-btn:hover {
+     transform: translateY(-2px);
+     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+ }
+ .theme-icon {
+     font-size: 1.5rem;
+ }
+
+ /* --- Responsive Design --- */
+ @media (max-width: 768px) {
+     .janggiboard {
+         grid-template-columns: repeat(9, 38px);
+         grid-template-rows: repeat(10, 38px);
+         width: 344px; /* 38*9 + 2 */
+         height: 382px; /* 38*10 + 2 */
+     }
+     .piece {
+         width: 34px;
+         height: 34px;
+         font-size: 1.2rem;
+     }
+     .janggi-area {
+         flex-direction: column;
+         gap: 15px;
+     }
+     .player-container.han-player { order: 1; }
+     .janggiboard { order: 2; }
+     .player-container.cho-player { order: 3; }
+
+     .game-info { flex-direction: column; gap: 15px; }
+ }

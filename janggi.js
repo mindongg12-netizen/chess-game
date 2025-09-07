@@ -1,30 +1,34 @@
-class JanggiGame {
+    class JanggiGame {
     constructor() {
+        // 장기판은 10행 9열
         this.board = [];
-        this.currentPlayer = 'cho'; // 장기는 초(楚)가 먼저 시작
+        this.rows = 10;
+        this.cols = 9;
+
+        // 초나라가 먼저 시작
+        this.currentPlayer = 'cho';
         this.selectedSquare = null;
         this.gameStarted = false;
         this.capturedPieces = { cho: [], han: [] };
 
-        // Timer properties
-        this.turnTimeLimit = 40; // 40 seconds limit
+        // 타이머 속성
+        this.turnTimeLimit = 40; 
         this.currentTurnTime = this.turnTimeLimit;
         this.timerInterval = null;
 
-        // Online game properties
+        // 온라인 게임 속성
         this.gameCode = null;
         this.isOnlineGame = false;
-        this.isRoomCreated = false;
         this.isGameInProgress = false;
-        this.isRoomHost = false; // 방장은 '초(cho)'
-        this.isRoomGuest = false; // 게스트는 '한(han)'
-        this.isMovePending = false;
+        this.isRoomHost = false; // 초(楚)
+        this.isRoomGuest = false; // 한(漢)
+        this.isMovePending = false; 
 
-        // Player names
-        this.hostPlayerName = ''; // 초(cho) 플레이어
-        this.guestPlayerName = ''; // 한(han) 플레이어
+        // 플레이어 이름
+        this.hostPlayerName = '';
+        this.guestPlayerName = '';
 
-        // Firebase real-time communication
+        // Firebase 실시간 통신
         this.database = null;
         this.playerId = this.generatePlayerId();
         this.gameRef = null;
@@ -35,17 +39,15 @@ class JanggiGame {
 
         // 장기 기물 (Unicode)
         this.pieces = {
-            cho: { // 초(楚) - 녹색/파란색
-                general: '楚', chariot: '車', cannon: '砲',
-                horse: '馬', elephant: '象', guard: '士', soldier: '卒'
+            cho: { // 초 (녹색/파란색)
+                king: '楚', chariot: '車', cannon: '包', horse: '馬', elephant: '象', guard: '士', soldier: '卒'
             },
-            han: { // 한(漢) - 빨간색
-                general: '漢', chariot: '車', cannon: '包',
-                horse: '傌', elephant: '相', guard: '士', soldier: '兵'
+            han: { // 한 (빨간색)
+                king: '漢', chariot: '車', cannon: '包', horse: '馬', elephant: '象', guard: '士', soldier: '兵'
             }
         };
 
-        console.log('🔥 Firebase Janggi Game Initialization Started');
+        console.log('🔥 Janggi Game Initialization Started');
         console.log('🆔 Player ID:', this.playerId);
 
         this.initializeEventListeners();
@@ -86,16 +88,13 @@ class JanggiGame {
     async startGame() {
         const hostNameInput = document.getElementById('hostNameInput');
         const hostName = hostNameInput.value.trim();
-        if (!hostName) {
-            this.showNameError(hostNameInput, '이름을 입력하세요');
+        if (!hostName || hostName.length < 2) {
+            this.showNameError(hostNameInput, '이름을 2자 이상 입력하세요');
             return;
         }
-        if (hostName.length < 2) {
-            this.showNameError(hostNameInput, '이름은 2자 이상이어야 합니다');
-            return;
-        }
+        
         if (!this.database) {
-            alert('서버 연결을 기다리고 있습니다. 잠시 후 다시 시도해주세요.');
+            alert('Firebase에 연결 중입니다. 잠시 후 다시 시도해주세요.');
             return;
         }
         try {
@@ -104,7 +103,6 @@ class JanggiGame {
             this.isRoomHost = true;
             this.isRoomGuest = false;
             this.isOnlineGame = true;
-            console.log('🏠 방장 설정 완료 (초)');
             
             const roomData = {
                 hostId: this.playerId,
@@ -117,13 +115,11 @@ class JanggiGame {
                 capturedPieces: { cho: [], han: [] },
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             };
-            this.gameRef = this.database.ref('games/' + this.gameCode);
+            this.gameRef = this.database.ref('janggi_games/' + this.gameCode);
             await this.gameRef.set(roomData);
             
-            console.log('✅ Firebase 방 생성:', this.gameCode);
             document.getElementById('gameMenu').style.display = 'none';
             document.getElementById('gameContainer').style.display = 'block';
-            
             this.showGameCode();
             this.initializeBoard();
             this.renderBoard();
@@ -131,8 +127,8 @@ class JanggiGame {
             this.updatePlayerNames();
             this.setupFirebaseListeners();
         } catch (error) {
-            console.error('❌ 방 생성 실패:', error);
-            alert('방 생성에 실패했습니다: ' + error.message);
+            console.error('❌ Failed to create room:', error);
+            alert('방 만들기에 실패했습니다: ' + error.message);
         }
     }
 
@@ -154,7 +150,7 @@ class JanggiGame {
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
         } catch (error) {
-            console.error('❌ 게임 재시작 실패:', error);
+            console.error('❌ Game restart failed:', error);
             alert('게임 재시작에 실패했습니다: ' + error.message);
         }
     }
@@ -170,8 +166,15 @@ class JanggiGame {
         this.renderBoard();
         this.showWaitingState();
     }
-
+    
     backToMenu() {
+        // Clean up Firebase listeners to prevent memory leaks
+        if (this.gameRef && this.listeners.length > 0) {
+            this.listeners.forEach(({ ref, listener }) => ref.off('value', listener));
+            this.listeners = [];
+            this.gameRef = null;
+        }
+
         this.stopTurnTimer();
         this.hideGameCode();
         this.hideAllButtons();
@@ -181,38 +184,67 @@ class JanggiGame {
         document.getElementById('gameContainer').style.display = 'none';
         document.getElementById('gameMenu').style.display = 'block';
         this.gameStarted = false;
-        this.isRoomCreated = false;
         this.isGameInProgress = false;
         this.isRoomHost = false;
         this.isRoomGuest = false;
         this.isOnlineGame = false;
         this.hostPlayerName = '';
         this.guestPlayerName = '';
+        document.getElementById('janggiboard').innerHTML = '';
     }
 
     initializeBoard() {
-        this.board = Array(10).fill(null).map(() => Array(9).fill(null));
-        const set = (r, c, type, color) => { this.board[r][c] = { type, color }; };
+        this.board = this.getInitialBoard();
+    }
+    
+    getInitialBoard() {
+        const board = Array(this.rows).fill(null).map(() => Array(this.cols).fill(null));
+        // 한나라 (Red)
+        board[0][0] = { type: 'chariot', color: 'han' };
+        board[0][1] = { type: 'elephant', color: 'han' };
+        board[0][2] = { type: 'horse', color: 'han' };
+        board[0][3] = { type: 'guard', color: 'han' };
+        board[0][5] = { type: 'guard', color: 'han' };
+        board[0][6] = { type: 'elephant', color: 'han' };
+        board[0][7] = { type: 'horse', color: 'han' };
+        board[0][8] = { type: 'chariot', color: 'han' };
+        board[1][4] = { type: 'king', color: 'han' };
+        board[2][1] = { type: 'cannon', color: 'han' };
+        board[2][7] = { type: 'cannon', color: 'han' };
+        board[3][0] = { type: 'soldier', color: 'han' };
+        board[3][2] = { type: 'soldier', color: 'han' };
+        board[3][4] = { type: 'soldier', color: 'han' };
+        board[3][6] = { type: 'soldier', color: 'han' };
+        board[3][8] = { type: 'soldier', color: 'han' };
 
-        set(0,0,'chariot','han'); set(0,8,'chariot','han'); set(0,1,'horse','han');   set(0,7,'horse','han');
-        set(0,2,'elephant','han');set(0,6,'elephant','han');set(0,3,'guard','han');   set(0,5,'guard','han');
-        set(1,4,'general','han'); set(2,1,'cannon','han');  set(2,7,'cannon','han');
-        set(3,0,'soldier','han'); set(3,2,'soldier','han'); set(3,4,'soldier','han'); set(3,6,'soldier','han'); set(3,8,'soldier','han');
-
-        set(9,0,'chariot','cho'); set(9,8,'chariot','cho'); set(9,1,'horse','cho');   set(9,7,'horse','cho');
-        set(9,2,'elephant','cho');set(9,6,'elephant','cho');set(9,3,'guard','cho');   set(9,5,'guard','cho');
-        set(8,4,'general','cho'); set(7,1,'cannon','cho');  set(7,7,'cannon','cho');
-        set(6,0,'soldier','cho'); set(6,2,'soldier','cho'); set(6,4,'soldier','cho'); set(6,6,'soldier','cho'); set(6,8,'soldier','cho');
+        // 초나라 (Blue/Green)
+        board[9][0] = { type: 'chariot', color: 'cho' };
+        board[9][1] = { type: 'elephant', color: 'cho' };
+        board[9][2] = { type: 'horse', color: 'cho' };
+        board[9][3] = { type: 'guard', color: 'cho' };
+        board[9][5] = { type: 'guard', color: 'cho' };
+        board[9][6] = { type: 'elephant', color: 'cho' };
+        board[9][7] = { type: 'horse', color: 'cho' };
+        board[9][8] = { type: 'chariot', color: 'cho' };
+        board[8][4] = { type: 'king', color: 'cho' };
+        board[7][1] = { type: 'cannon', color: 'cho' };
+        board[7][7] = { type: 'cannon', color: 'cho' };
+        board[6][0] = { type: 'soldier', color: 'cho' };
+        board[6][2] = { type: 'soldier', color: 'cho' };
+        board[6][4] = { type: 'soldier', color: 'cho' };
+        board[6][6] = { type: 'soldier', color: 'cho' };
+        board[6][8] = { type: 'soldier', color: 'cho' };
+        return board;
     }
 
     renderBoard() {
         const boardElement = document.getElementById('janggiboard');
         if (!boardElement) return;
         boardElement.innerHTML = '';
-        for (let row = 0; row < 10; row++) {
-            for (let col = 0; col < 9; col++) {
+        for (let row = 0; row < this.rows; row++) {
+            for (let col = 0; col < this.cols; col++) {
                 const square = document.createElement('div');
-                square.className = `square`;
+                square.className = 'square';
                 square.dataset.row = row;
                 square.dataset.col = col;
                 const piece = this.board[row][col];
@@ -230,22 +262,28 @@ class JanggiGame {
     }
 
     async handleSquareClick(row, col) {
-        if (!this.gameStarted || !this.isGameInProgress || this.isMovePending) return;
-
+        if (!this.gameStarted || !this.isGameInProgress || this.isMovePending) {
+            return;
+        }
+        
         const myColor = this.isRoomHost ? 'cho' : 'han';
         if (this.currentPlayer !== myColor) {
             alert("상대방의 차례입니다.");
             return;
         }
-
+        
         const piece = this.board[row][col];
+        
         if (!this.selectedSquare) {
             if (piece && piece.color === this.currentPlayer) {
                 this.selectedSquare = { row, col };
                 this.highlightValidMoves(row, col);
             }
         } else {
-            if (this.selectedSquare.row === row && this.selectedSquare.col === col) {
+            const fromRow = this.selectedSquare.row;
+            const fromCol = this.selectedSquare.col;
+
+            if (fromRow === row && fromCol === col) {
                 this.selectedSquare = null;
                 this.clearHighlights();
             } else if (piece && piece.color === this.currentPlayer) {
@@ -253,8 +291,8 @@ class JanggiGame {
                 this.clearHighlights();
                 this.highlightValidMoves(row, col);
             } else {
-                if (this.isValidMove(this.selectedSquare.row, this.selectedSquare.col, row, col)) {
-                    await this.makeMove(this.selectedSquare.row, this.selectedSquare.col, row, col);
+                if (this.isValidMove(fromRow, fromCol, row, col)) {
+                    await this.makeMove(fromRow, fromCol, row, col);
                 }
                 this.selectedSquare = null;
                 this.clearHighlights();
@@ -264,12 +302,16 @@ class JanggiGame {
 
     highlightValidMoves(row, col) {
         this.clearHighlights();
-        document.querySelector(`[data-row="${row}"][data-col="${col}"]`).classList.add('selected');
-        for (let r = 0; r < 10; r++) {
-            for (let c = 0; c < 9; c++) {
+        document.querySelector(`.square[data-row='${row}'][data-col='${col}']`).classList.add('selected');
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
                 if (this.isValidMove(row, col, r, c)) {
-                    const targetSquare = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-                    targetSquare.classList.add(this.board[r][c] ? 'capture' : 'valid-move');
+                    const targetSquare = document.querySelector(`.square[data-row='${r}'][data-col='${c}']`);
+                    if (this.board[r][c]) {
+                        targetSquare.classList.add('capture');
+                    } else {
+                        targetSquare.classList.add('valid-move');
+                    }
                 }
             }
         }
@@ -279,105 +321,213 @@ class JanggiGame {
         document.querySelectorAll('.square').forEach(s => s.classList.remove('selected', 'valid-move', 'capture'));
     }
 
+    // ### 장기 행마법 (핵심 로직) ###
     isValidMove(fromRow, fromCol, toRow, toCol) {
-        if (toRow<0 || toRow>=10 || toCol<0 || toCol>=9) return false;
-        if (fromRow===toRow && fromCol===toCol) return false;
+        if (toRow < 0 || toRow >= this.rows || toCol < 0 || toCol >= this.cols) return false;
+        
         const piece = this.board[fromRow][fromCol];
-        const target = this.board[toRow][toCol];
+        const targetPiece = this.board[toRow][toCol];
+
         if (!piece) return false;
-        if (target && target.color === piece.color) return false;
+        if (targetPiece && targetPiece.color === piece.color) return false;
 
         switch (piece.type) {
-            case 'general': case 'guard': return this.isValidPalaceMove(fromRow, fromCol, toRow, toCol);
-            case 'horse': return this.isValidHorseMove(fromRow, fromCol, toRow, toCol);
-            case 'elephant': return this.isValidElephantMove(fromRow, fromCol, toRow, toCol);
-            case 'chariot': return this.isValidChariotMove(fromRow, fromCol, toRow, toCol);
-            case 'cannon': return this.isValidCannonMove(fromRow, fromCol, toRow, toCol);
-            case 'soldier': return this.isValidSoldierMove(fromRow, fromCol, toRow, toCol, piece.color);
-            default: return false;
+            case 'king':
+            case 'guard':
+                return this.isPalaceMove(fromRow, fromCol, toRow, toCol, piece.color);
+            case 'horse':
+                return this.isHorseMove(fromRow, fromCol, toRow, toCol);
+            case 'elephant':
+                 return this.isElephantMove(fromRow, fromCol, toRow, toCol);
+            case 'chariot':
+                return this.isChariotMove(fromRow, fromCol, toRow, toCol);
+            case 'cannon':
+                return this.isCannonMove(fromRow, fromCol, toRow, toCol);
+            case 'soldier':
+                return this.isSoldierMove(fromRow, fromCol, toRow, toCol, piece.color);
+            default:
+                return false;
         }
     }
 
-    isPalace(r, c) { return (r>=0&&r<=2&&c>=3&&c<=5) || (r>=7&&r<=9&&c>=3&&c<=5); }
-    isValidPalaceMove(fR, fC, tR, tC) {
-        if (!this.isPalace(tR, tC)) return false;
-        const dR = Math.abs(tR-fR), dC = Math.abs(tC-fC);
-        if (dR+dC === 1) return true;
-        if (dR===1 && dC===1) {
-            const centers = [[1,4],[8,4]];
-            return centers.some(([r,c]) => (r===fR&&c===fC) || (r===tR&&c===tC));
+    isPalace(row, col) {
+        const isHanPalace = (row >= 0 && row <= 2) && (col >= 3 && col <= 5);
+        const isChoPalace = (row >= 7 && row <= 9) && (col >= 3 && col <= 5);
+        return { isHanPalace, isChoPalace };
+    }
+
+    isPalaceMove(fromRow, fromCol, toRow, toCol, color) {
+        const { isHanPalace, isChoPalace } = this.isPalace(toRow, toCol);
+        if (color === 'han' && !isHanPalace) return false;
+        if (color === 'cho' && !isChoPalace) return false;
+        
+        const rowDiff = Math.abs(toRow - fromRow);
+        const colDiff = Math.abs(toCol - fromCol);
+        
+        // 궁성 내 대각선 길 위치
+        const diagonalPoints = {
+            han: [[0, 3], [1, 4], [2, 5], [0, 5], [2, 3]],
+            cho: [[7, 3], [8, 4], [9, 5], [7, 5], [9, 3]]
+        };
+        const palace = color === 'han' ? diagonalPoints.han : diagonalPoints.cho;
+        const isFromDiagonal = palace.some(p => p[0] === fromRow && p[1] === fromCol);
+        const isToDiagonal = palace.some(p => p[0] === toRow && p[1] === toCol);
+        
+        if (rowDiff === 1 && colDiff === 1 && isFromDiagonal && isToDiagonal) return true;
+        if (rowDiff + colDiff === 1) return true;
+        
+        return false;
+    }
+
+    isChariotMove(fromRow, fromCol, toRow, toCol) {
+        const rowDiff = Math.abs(toRow - fromRow);
+        const colDiff = Math.abs(toCol - fromCol);
+        
+        // 직선 이동
+        if ((rowDiff > 0 && colDiff === 0) || (rowDiff === 0 && colDiff > 0)) {
+            return this.countPiecesOnPath(fromRow, fromCol, toRow, toCol) === 0;
+        }
+        
+        // 궁성 내 대각선 이동
+        const { isHanPalace: fromHan } = this.isPalace(fromRow, fromCol);
+        const { isHanPalace: toHan } = this.isPalace(toRow, toCol);
+        const { isChoPalace: fromCho } = this.isPalace(fromRow, fromCol);
+        const { isChoPalace: toCho } = this.isPalace(toRow, toCol);
+
+        if ((fromHan && toHan) || (fromCho && toCho)) {
+             if (rowDiff === 1 && colDiff === 1) return true; // 한 칸 대각선 이동
+             if (rowDiff === 2 && colDiff === 2 && (fromRow+fromCol)%2 === 0 ) { // 두 칸 대각선 이동
+                 const midRow = (fromRow + toRow) / 2;
+                 const midCol = (fromCol + toCol) / 2;
+                 if (midRow === 1 || midRow === 8) { // 궁 중앙
+                    return this.board[midRow][midCol] === null;
+                 }
+             }
         }
         return false;
     }
-    isValidHorseMove(fR, fC, tR, tC) {
-        const dR = Math.abs(tR-fR), dC = Math.abs(tC-fC);
-        if (!((dR===2&&dC===1)||(dR===1&&dC===2))) return false;
-        if (dR===2 && this.board[fR+Math.sign(tR-fR)][fC]) return false;
-        if (dC===2 && this.board[fR][fC+Math.sign(tC-fC)]) return false;
-        return true;
-    }
-    isValidElephantMove(fR, fC, tR, tC) {
-        const dR = Math.abs(tR-fR), dC = Math.abs(tC-fC);
-        if (!((dR===3&&dC===2)||(dR===2&&dC===3))) return false;
-        const sR = Math.sign(tR-fR), sC = Math.sign(tC-fC);
-        if (dR===3 && (this.board[fR+sR][fC] || this.board[fR+2*sR][fC+sC])) return false;
-        if (dC===3 && (this.board[fR][fC+sC] || this.board[fR+sR][fC+2*sC])) return false;
-        return true;
-    }
-    isValidChariotMove(fR, fC, tR, tC) {
-        const isDiagonal = Math.abs(tR-fR)===Math.abs(tC-fC);
-        if ((fR!==tR && fC!==tC && !isDiagonal) || (isDiagonal && !this.isPalace(fR,fC))) return false;
-        
-        const sR=Math.sign(tR-fR), sC=Math.sign(tC-fC);
-        let r=fR+sR, c=fC+sC;
-        while(r!==tR||c!==tC) {
-            if(this.board[r][c]) return false;
-            r+=sR; c+=sC;
+
+    isHorseMove(fromRow, fromCol, toRow, toCol) {
+        const rowDiff = Math.abs(toRow - fromRow);
+        const colDiff = Math.abs(toCol - fromCol);
+
+        if (!((rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2))) return false;
+
+        if (rowDiff === 2) { // 세로로 2칸 이동
+            if (this.board[fromRow + Math.sign(toRow - fromRow)][fromCol]) return false;
+        } else { // 가로로 2칸 이동
+            if (this.board[fromRow][fromCol + Math.sign(toCol - fromCol)]) return false;
         }
         return true;
     }
-    isValidCannonMove(fR, fC, tR, tC) {
-        const target = this.board[tR][tC];
-        if(target && target.type === 'cannon') return false;
+    
+    isElephantMove(fromRow, fromCol, toRow, toCol) {
+        const rowDiff = Math.abs(toRow - fromRow);
+        const colDiff = Math.abs(toCol - fromCol);
+
+        if (!((rowDiff === 3 && colDiff === 2) || (rowDiff === 2 && colDiff === 3))) return false;
+
+        let block1_r, block1_c, block2_r, block2_c;
+        const r_sign = Math.sign(toRow - fromRow);
+        const c_sign = Math.sign(toCol - fromCol);
+
+        if(rowDiff === 3) { // 세로 3칸
+            block1_r = fromRow + r_sign;
+            block1_c = fromCol;
+            block2_r = fromRow + 2 * r_sign;
+            block2_c = fromCol + c_sign;
+        } else { // 가로 3칸
+            block1_r = fromRow;
+            block1_c = fromCol + c_sign;
+            block2_r = fromRow + r_sign;
+            block2_c = fromCol + 2 * c_sign;
+        }
         
-        let jump = 0;
-        const isDiagonal = Math.abs(tR-fR)===Math.abs(tC-fC);
-        if ((fR!==tR && fC!==tC && !isDiagonal) || (isDiagonal && !this.isPalace(fR,fC))) return false;
+        if (this.board[block1_r][block1_c] || this.board[block2_r][block2_c]) return false;
+
+        return true;
+    }
+
+    isCannonMove(fromRow, fromCol, toRow, toCol) {
+        const target = this.board[toRow][toCol];
+        if (target && target.type === 'cannon') return false;
+
+        const rowDiff = Math.abs(toRow - fromRow);
+        const colDiff = Math.abs(toCol - fromCol);
+
+        if ((rowDiff > 0 && colDiff > 0)) return false; // 대각선 이동 불가
+
+        const jumpCount = this.countPiecesOnPath(fromRow, fromCol, toRow, toCol);
+        if (jumpCount !== 1) return false;
         
-        const sR=Math.sign(tR-fR), sC=Math.sign(tC-fC);
-        let r=fR+sR, c=fC+sC;
-        while(r!==tR||c!==tC) {
-            if(this.board[r][c]) {
-                if(this.board[r][c].type==='cannon') return false; // 포는 포를 못넘음
-                jump++;
+        // 포는 포를 뛰어넘을 수 없음
+        const stepR = Math.sign(toRow - fromRow);
+        const stepC = Math.sign(toCol - fromCol);
+        let r = fromRow + stepR;
+        let c = fromCol + stepC;
+        while (r !== toRow || c !== toCol) {
+            if (this.board[r][c] && this.board[r][c].type === 'cannon') {
+                return false;
             }
-            r+=sR; c+=sC;
+            r += stepR;
+            c += stepC;
         }
-        return jump === 1;
+        return true;
     }
-    isValidSoldierMove(fR, fC, tR, tC, color) {
-        const dir = color === 'cho' ? -1 : 1;
-        if (tR===fR+dir && tC===fC) return true;
-        if (tR===fR && Math.abs(tC-fC)===1) return true;
-        if (this.isPalace(fR,fC) && tR===fR+dir && Math.abs(tC-fC)===1) return true;
+
+    isSoldierMove(fromRow, fromCol, toRow, toCol, color) {
+        const direction = color === 'cho' ? -1 : 1;
+        const rowDiff = toRow - fromRow;
+        const colDiff = Math.abs(toCol - fromCol);
+
+        // 직진
+        if (rowDiff === direction && colDiff === 0) return true;
+        // 옆으로
+        if (rowDiff === 0 && colDiff === 1) return true;
+        
+        // 궁성 내 대각선
+        const { isHanPalace, isChoPalace } = this.isPalace(fromRow, fromCol);
+        const enemyPalace = color === 'cho' ? isHanPalace : isChoPalace;
+        
+        if (enemyPalace && rowDiff === direction && colDiff === 1) return true;
+        
         return false;
     }
+
+    countPiecesOnPath(fromRow, fromCol, toRow, toCol) {
+        let count = 0;
+        const stepR = Math.sign(toRow - fromRow);
+        const stepC = Math.sign(toCol - fromCol);
+        let r = fromRow + stepR;
+        let c = fromCol + stepC;
+        while (r !== toRow || c !== toCol) {
+            if (this.board[r][c]) count++;
+            r += stepR;
+            c += stepC;
+        }
+        return count;
+    }
+
+    // ### 행마법 끝 ###
 
     async makeMove(fromRow, fromCol, toRow, toCol) {
         this.isMovePending = true;
-        const piece = this.board[fromRow][fromCol];
-        const captured = this.board[toRow][toCol];
-        let gameEnded = false, winner = null;
 
-        if (captured) {
-            this.capturedPieces[captured.color].push(captured);
-            if (captured.type === 'general') {
+        const piece = this.board[fromRow][fromCol];
+        const capturedPiece = this.board[toRow][toCol];
+        let gameEnded = false;
+        let winner = null;
+
+        if (capturedPiece) {
+            this.capturedPieces[capturedPiece.color].push(capturedPiece);
+            if (capturedPiece.type === 'king') {
                 gameEnded = true;
                 winner = piece.color;
             }
         }
         this.board[toRow][toCol] = piece;
         this.board[fromRow][fromCol] = null;
+        
         this.renderBoard();
         
         if (this.gameRef && this.isOnlineGame) {
@@ -396,12 +546,13 @@ class JanggiGame {
                 }
                 await this.gameRef.update(updateData);
             } catch (error) {
-                console.error('❌ 수 이동 실패:', error);
+                console.error('❌ Failed to send move:', error);
                 this.isMovePending = false;
+                alert('수를 전송하는 데 오류가 발생했습니다. 다시 시도해주세요.');
             }
         }
     }
-
+    
     endGame(winner) {
         this.isGameInProgress = false;
         this.gameStarted = false;
@@ -411,31 +562,33 @@ class JanggiGame {
         const winnerText = winner === 'cho' ? '초(楚)' : '한(漢)';
         gameStatus.textContent = `🎉 게임 종료! ${winnerText}의 승리! 🎉`;
         
+        const myColor = this.isRoomHost ? 'cho' : 'han';
         setTimeout(() => {
-            const myColor = this.isRoomHost ? 'cho' : 'han';
-            alert(winner === myColor ? '🎊 축하합니다! 승리하셨습니다! 🎊' : '😊 수고하셨습니다! 😊');
+            if (winner === myColor) {
+                alert(`🎊 축하합니다! 승리하셨습니다! 🎊`);
+            } else {
+                alert(`😊 수고하셨습니다! 다시 도전해보세요! 💪`);
+            }
         }, 500);
-    }
-    
-    switchPlayer() {
-        this.currentPlayer = this.currentPlayer === 'cho' ? 'han' : 'cho';
-        this.updateGameStatus();
-        this.resetTurnTimer();
     }
 
     updateGameStatus() {
         const playerText = this.currentPlayer === 'cho' ? "초(楚)의 차례" : "한(漢)의 차례";                                                                                                                                      
         document.getElementById('currentPlayer').textContent = playerText;
+        if (this.isGameInProgress) document.getElementById('gameStatus').textContent = '게임 진행 중';
+        this.updateTimerDisplay();
     }
 
     updateCapturedPieces() {
         const capturedChoEl = document.getElementById('capturedCho');
         const capturedHanEl = document.getElementById('capturedHan');
         if (!this.capturedPieces) this.capturedPieces = { cho: [], han: [] };
-        capturedChoEl.innerHTML = this.capturedPieces.cho.map(p => this.pieces.cho[p.type]).join(' ');
-        capturedHanEl.innerHTML = this.capturedPieces.han.map(p => this.pieces.han[p.type]).join(' ');
+        capturedChoEl.innerHTML = this.capturedPieces.cho.map(p => `<span class="piece cho">${this.pieces.cho[p.type]}</span>`).join(' ');
+        capturedHanEl.innerHTML = this.capturedPieces.han.map(p => `<span class="piece han">${this.pieces.han[p.type]}</span>`).join(' ');
     }
 
+    // --- 이하 코드는 체스 게임과 거의 동일한 UI/온라인 로직 ---
+    
     startTurnTimer() {
         this.stopTurnTimer();
         this.currentTurnTime = this.turnTimeLimit;
@@ -448,17 +601,20 @@ class JanggiGame {
     }
 
     stopTurnTimer() {
-        if (this.timerInterval) clearInterval(this.timerInterval);
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
     }
 
     resetTurnTimer() {
         this.stopTurnTimer();
-        if(this.isGameInProgress) this.startTurnTimer();
+        if(this.isGameInProgress) {
+            this.startTurnTimer();
+        }
     }
     
     updateTimerDisplay() {
         const timerElement = document.getElementById('turnTimer');
-        if(timerElement) {
+        if (timerElement) {
             timerElement.textContent = this.currentTurnTime;
             timerElement.classList.toggle('warning', this.currentTurnTime <= 5);
         }
@@ -468,23 +624,27 @@ class JanggiGame {
         this.stopTurnTimer();
         const myColor = this.isRoomHost ? 'cho' : 'han';
         if (this.currentPlayer === myColor) {
-            alert('시간 초과! 무작위 수가 두어집니다.');
-            const moves = this.getAllValidMoves(this.currentPlayer);
-            if (moves.length > 0) {
-                const rMove = moves[Math.floor(Math.random() * moves.length)];
-                await this.makeMove(rMove.fR, rMove.fC, rMove.tR, rMove.tC);
+            alert('시간 종료! 임의의 수가 두어집니다.');
+            const validMoves = this.getAllValidMoves(this.currentPlayer);
+            if (validMoves.length > 0) {
+                const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                await this.makeMove(randomMove.fromRow, randomMove.fromCol, randomMove.toRow, randomMove.toCol);
             }
         }
     }
 
     getAllValidMoves(player) {
         const moves = [];
-        for (let r=0; r<10; r++) for (let c=0; c<9; c++) {
-            const piece = this.board[r][c];
-            if (piece && piece.color === player) {
-                for (let tr=0; tr<10; tr++) for (let tc=0; tc<9; tc++) {
-                    if (this.isValidMove(r, c, tr, tc)) {
-                        moves.push({ fR: r, fC: c, tR: tr, tC: tc });
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const piece = this.board[r][c];
+                if (piece && piece.color === player) {
+                    for (let tr = 0; tr < this.rows; tr++) {
+                        for (let tc = 0; tc < this.cols; tc++) {
+                            if (this.isValidMove(r, c, tr, tc)) {
+                                moves.push({ fromRow: r, fromCol: c, toRow: tr, toCol: tc });
+                            }
+                        }
                     }
                 }
             }
@@ -492,37 +652,32 @@ class JanggiGame {
         return moves;
     }
 
-    generateRoomCode() { return Math.floor(10000 + Math.random() * 90000).toString(); }
-    getInitialBoard() {
-        const board = new JanggiGame();
-        board.initializeBoard();
-        return board.board;
-    }
-    
-    // --- 이하 Firebase 및 UI 제어 함수 (chess.js와 거의 동일, 텍스트만 수정) ---
-    // (이 부분은 chess.js에서 가져와 white/black -> cho/han으로 수정한 완전한 버전입니다.)
-    
     setupFirebaseListeners() {
         if (!this.gameRef) return;
         const gameListener = this.gameRef.on('value', (snapshot) => {
             const gameData = snapshot.val();
             if (!gameData) {
-                alert('게임 방이 사라졌습니다.');
+                alert('게임 방이 사라졌습니다. 메인 메뉴로 돌아갑니다.');
                 this.backToMenu();
                 return;
             }
-
+            
             this.hostPlayerName = gameData.hostName;
-            this.guestPlayerName = gameData.guestName;
+            if (gameData.guestId && !this.guestPlayerName) {
+                this.guestPlayerName = gameData.guestName;
+                if (this.isRoomHost) {
+                    this.showWaitingState();
+                }
+            }
             this.updatePlayerNames();
 
-            if (gameData.guestId && this.isRoomHost && !this.isGameInProgress) {
-                this.showWaitingState();
-            }
-
             if (gameData.board) this.syncBoard(gameData.board);
+
             if (gameData.capturedPieces) {
-                this.capturedPieces = gameData.capturedPieces;
+                this.capturedPieces = {
+                    cho: Array.isArray(gameData.capturedPieces.cho) ? gameData.capturedPieces.cho : [],
+                    han: Array.isArray(gameData.capturedPieces.han) ? gameData.capturedPieces.han : []
+                };
                 this.updateCapturedPieces();
             }
 
@@ -531,26 +686,31 @@ class JanggiGame {
                 this.updateGameStatus();
                 this.resetTurnTimer();
             }
+            
             this.isMovePending = false;
             
-            if (gameData.gameStarted && !this.isGameInProgress) this.handleGameStart();
-            if (gameData.gameEnded && this.isGameInProgress) this.endGame(gameData.winner);
-            if (gameData.gameRestarted && gameData.gameStarted) {
-                if(!this.isGameInProgress || !this.gameStarted) this.handleGameRestart(gameData);
+            if (gameData.gameStarted && !this.isGameInProgress) {
+                this.handleGameStart();
+            }
+            if (gameData.gameEnded && this.isGameInProgress) {
+                this.endGame(gameData.winner);
+            }
+            if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
+                 if(!this.isGameInProgress || !this.gameStarted) {
+                   this.handleGameRestart(gameData);
+                }
             }
         });
         this.listeners.push({ ref: this.gameRef, listener: gameListener });
     }
 
     syncBoard(newBoard) {
-        // Firebase에서 오는 데이터가 배열이 아닐 수 있으므로 안전하게 처리
-        const verifiedBoard = Array(10).fill(null).map(() => Array(9).fill(null));
-        if (newBoard && Array.isArray(newBoard)) {
-            for (let r = 0; r < 10; r++) {
-                if (newBoard[r] && Array.isArray(newBoard[r])) {
-                    for (let c = 0; c < 9; c++) {
-                        verifiedBoard[r][c] = newBoard[r][c] || null;
-                    }
+        if (!newBoard) return;
+        const verifiedBoard = Array(this.rows).fill(null).map(() => Array(this.cols).fill(null));
+        for (let r = 0; r < this.rows; r++) {
+            if (newBoard[r]) {
+                for (let c = 0; c < this.cols; c++) {
+                    verifiedBoard[r][c] = newBoard[r][c] || null;
                 }
             }
         }
@@ -567,36 +727,63 @@ class JanggiGame {
         this.updateGameStatus();
         this.startTurnTimer();
     }
-    
+
     handleGameRestart(gameData) {
         this.gameStarted = true;
         this.isGameInProgress = true;
         this.currentPlayer = 'cho';
-        this.syncBoard(gameData.board);
+        this.selectedSquare = null;
+        this.currentTurnTime = this.turnTimeLimit;
+        this.isMovePending = false;
+        
         this.capturedPieces = gameData.capturedPieces || { cho: [], han: [] };
-        this.updateCapturedPieces();
+        
+        document.getElementById('gameStatus').textContent = '게임이 재시작되었습니다!';
+        
         this.showGameButtons();
         this.resetTurnTimer();
         this.updateGameStatus();
-        alert('🎮 게임이 재시작되었습니다! 🎮');
+        
+        if (gameData.board) {
+            this.syncBoard(gameData.board);
+        }
+        
+        setTimeout(() => alert('🎮 게임이 재시작되었습니다! 🎮'), 500);
+    }
+    
+    generateRoomCode() {
+        return Math.floor(10000 + Math.random() * 90000).toString();
     }
     
     showGameCode() {
-        document.getElementById('gameCode').textContent = this.gameCode;
-        document.getElementById('gameCodeContainer').style.display = 'flex';
+        const gameCodeContainer = document.getElementById('gameCodeContainer');
+        const gameCodeElement = document.getElementById('gameCode');
+        if (gameCodeContainer && gameCodeElement && this.gameCode) {
+            gameCodeElement.textContent = this.gameCode;
+            gameCodeContainer.style.display = 'flex';
+        }
     }
-    hideGameCode() { document.getElementById('gameCodeContainer').style.display = 'none'; }
+    
+    hideGameCode() {
+        document.getElementById('gameCodeContainer').style.display = 'none';
+        this.gameCode = null;
+    }
+    
     copyGameCode() {
-        navigator.clipboard.writeText(this.gameCode).then(() => {
-            const btn = document.getElementById('copyCodeBtn');
-            btn.textContent = '✓';
-            setTimeout(() => { btn.textContent = '📋'; }, 1500);
-        });
+        if (this.gameCode) {
+            navigator.clipboard.writeText(this.gameCode).then(() => {
+                const copyBtn = document.getElementById('copyCodeBtn');
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✓';
+                setTimeout(() => { copyBtn.textContent = originalText; }, 1500);
+            }).catch(err => console.error('Failed to copy code: ', err));
+        }
     }
-
+    
     async startActualGame() {
-        if (!this.isRoomHost || !this.guestPlayerName) {
-            alert('⚠️ 상대방이 들어올 때까지 기다려주세요!');
+        if (!this.isRoomHost || !this.gameRef) return;
+        if (!this.guestPlayerName) {
+            alert('상대방이 들어올 때까지 기다려주세요!');
             return;
         }
         try {
@@ -606,61 +793,76 @@ class JanggiGame {
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
         } catch (error) {
+            console.error('❌ 게임 시작 실패:', error);
             alert('게임 시작에 실패했습니다: ' + error.message);
         }
     }
-
+    
     showWaitingState() {
-        const statusEl = document.getElementById('gameStatus');
+        const playerElement = document.getElementById('currentPlayer');
+        const statusElement = document.getElementById('gameStatus');
         const startBtn = document.getElementById('startGameBtnInRoom');
-        document.getElementById('currentPlayer').textContent = '대기중';
-
+        
+        playerElement.textContent = '대기중';
+        
         if (this.isRoomHost) {
             if (this.guestPlayerName) {
-                statusEl.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
+                statusElement.textContent = '상대방이 접속했습니다! 게임을 시작하세요.';
                 startBtn.style.display = 'inline-block';
                 startBtn.disabled = false;
+                startBtn.textContent = '게임 시작';
             } else {
-                statusEl.textContent = '상대방을 기다리고 있습니다. 코드를 공유하세요.';
+                statusElement.textContent = '상대방을 기다리는 중... 코드를 공유하세요!';
                 startBtn.style.display = 'inline-block';
                 startBtn.disabled = true;
+                startBtn.textContent = '대기중...';
             }
         } else if (this.isRoomGuest) {
-            statusEl.textContent = '방장이 게임을 시작할 때까지 기다려주세요.';
+            statusElement.textContent = '방장이 게임을 시작할 때까지 기다려주세요!';
             startBtn.style.display = 'none';
         }
+        
         this.hideResetButton();
+        this.updatePlayerNames();
     }
-
+    
     showGameButtons() {
         document.getElementById('startGameBtnInRoom').style.display = 'none';
         document.getElementById('resetBtn').style.display = 'inline-block';
     }
-    hideResetButton() { document.getElementById('resetBtn').style.display = 'none'; }
+    
+    hideResetButton() {
+        document.getElementById('resetBtn').style.display = 'none';
+    }
+    
     hideAllButtons() {
         document.getElementById('startGameBtnInRoom').style.display = 'none';
         document.getElementById('resetBtn').style.display = 'none';
     }
-
+    
     async joinRoom() {
         const guestNameInput = document.getElementById('guestNameInput');
         const guestName = guestNameInput.value.trim();
         const codeInput = document.getElementById('roomCodeInput');
-        const code = codeInput.value.trim();
-        if (!guestName || guestName.length < 2) {
-            this.showNameError(guestNameInput, '이름을 2자 이상 입력하세요'); return;
+        const enteredCode = codeInput.value.trim();
+        if (guestName.length < 2) {
+            this.showNameError(guestNameInput, '이름을 2자 이상 입력하세요');
+            return;
         }
-        if (code.length !== 5) {
-            this.showJoinError('5자리 코드를 입력하세요'); return;
+        if (enteredCode.length !== 5 || !/^\d{5}$/.test(enteredCode)) {
+            this.showJoinError('5자리 숫자 코드를 입력하세요');
+            return;
         }
-        
+        if (!this.database) {
+            this.showJoinError('서버 연결 중...');
+            return;
+        }
         try {
-            this.gameCode = code;
-            this.gameRef = this.database.ref('games/' + this.gameCode);
+            this.gameCode = enteredCode;
+            this.gameRef = this.database.ref('janggi_games/' + this.gameCode);
             const snapshot = await this.gameRef.once('value');
             const roomData = snapshot.val();
-
-            if (!roomData) throw new Error('방 코드가 존재하지 않습니다');
+            if (!roomData) throw new Error('존재하지 않는 방입니다');
             if (roomData.guestId) throw new Error('방이 가득 찼습니다');
             
             await this.gameRef.update({
@@ -684,10 +886,11 @@ class JanggiGame {
             this.setupFirebaseListeners();
 
         } catch (error) {
+            console.error('❌ Failed to join room:', error);
             this.showJoinError(error.message);
         }
     }
-
+    
     showJoinError(message) {
         const joinBtn = document.getElementById('joinRoomBtn');
         const originalText = joinBtn.textContent;
@@ -699,30 +902,39 @@ class JanggiGame {
         }, 2000);
     }
     
-    clearRoomCodeInput() { document.getElementById('roomCodeInput').value = ''; }
-
-    showNameError(input, message) {
-        const originalPlaceholder = input.placeholder;
-        input.placeholder = message;
-        input.value = '';
-        setTimeout(() => { input.placeholder = originalPlaceholder; }, 3000);
+    clearRoomCodeInput() {
+        document.getElementById('roomCodeInput').value = '';
     }
-
+    
+    showNameError(inputElement, message) {
+        const originalPlaceholder = inputElement.placeholder;
+        inputElement.placeholder = message;
+        inputElement.value = '';
+        inputElement.classList.add('error');
+        setTimeout(() => {
+            inputElement.placeholder = originalPlaceholder;
+            inputElement.classList.remove('error');
+        }, 3000);
+    }
+    
     clearNameInputs() {
         document.getElementById('hostNameInput').value = '';
         document.getElementById('guestNameInput').value = '';
     }
 
     updatePlayerNames() {
-        // HTML의 ID에 맞춰 수정 (choPlayerName, hanPlayerName)
-        const choPlayerEl = document.getElementById('choPlayerName');
-        const hanPlayerEl = document.getElementById('hanPlayerName');
+        const choPlayerElement = document.getElementById('choPlayerName');
+        const hanPlayerElement = document.getElementById('hanPlayerName');
+        const choContainer = document.getElementById('choPlayerContainer');
+        const hanContainer = document.getElementById('hanPlayerContainer');
         
-        if (choPlayerEl) choPlayerEl.textContent = this.hostPlayerName || '대기중...';
-        if (hanPlayerEl) hanPlayerEl.textContent = this.guestPlayerName || '대기중...';
+        choPlayerElement.textContent = this.hostPlayerName || '대기중...';
+        hanPlayerElement.textContent = this.guestPlayerName || '대기중...';
         
-        document.getElementById('choPlayerContainer').style.display = 'flex';
-        document.getElementById('hanPlayerContainer').style.display = 'flex';
+        if (this.isRoomHost || this.isRoomGuest) {
+            choContainer.style.display = 'flex';
+            hanContainer.style.display = 'flex';
+        }
     }
 
     hidePlayerNames() {
@@ -730,22 +942,28 @@ class JanggiGame {
         document.getElementById('hanPlayerContainer').style.display = 'none';
     }
 
-    generatePlayerId() { return 'player_' + Math.random().toString(36).substr(2, 9); }
-
-    // 다크모드 관련 함수 (기존과 동일)
-    initializeTheme() {
-        if (this.isDarkMode) this.enableDarkMode(); else this.enableLightMode();
+    generatePlayerId() {
+        return 'player_' + Math.random().toString(36).substr(2, 9);
     }
+
+    initializeTheme() {
+        if (this.isDarkMode) this.enableDarkMode();
+        else this.enableLightMode();
+    }
+
     toggleTheme() {
         this.isDarkMode = !this.isDarkMode;
-        if (this.isDarkMode) this.enableDarkMode(); else this.enableLightMode();
+        if (this.isDarkMode) this.enableDarkMode();
+        else this.enableLightMode();
         localStorage.setItem('darkMode', this.isDarkMode.toString());
     }
+
     enableDarkMode() {
         document.getElementById('lightTheme').disabled = true;
         document.getElementById('darkTheme').disabled = false;
         document.querySelector('.theme-icon').textContent = '☀️';
     }
+
     enableLightMode() {
         document.getElementById('lightTheme').disabled = false;
         document.getElementById('darkTheme').disabled = true;
