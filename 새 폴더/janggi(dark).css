@@ -1,0 +1,145 @@
+/* 다크 모드 스타일 */
+
+body {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+.container {
+    background-color: #1e1e1e;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+header h1 {
+    color: #bb86fc; /* 다크모드 강조색 */
+}
+
+/* 게임 메뉴 */
+.game-menu h2 {
+    color: #e0e0e0;
+}
+
+.game-menu h3 {
+    color: #bb86fc;
+    border-bottom-color: #bb86fc;
+}
+
+.name-input, .room-code-input {
+    background-color: #333;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.start-btn, .join-btn {
+    background: linear-gradient(135deg, #bb86fc, #a764fc);
+    color: #121212;
+}
+
+.start-btn:hover, .join-btn:hover {
+    background: linear-gradient(135deg, #a764fc, #9c4dfc);
+}
+
+.divider {
+    color: #666;
+}
+
+/* 게임 정보 */
+.game-info {
+    background-color: #2a2a2a;
+}
+
+#currentPlayer, .timer, #gameCode {
+    background-color: #333;
+    color: #e0e0e0;
+}
+
+/* 버튼들 */
+.copy-btn { background-color: #03dac6; color: #121212; }
+.start-game-btn { background-color: #4caf50; }
+.reset-btn { background-color: #ff9800; color: #121212; }
+.menu-btn { background-color: #666; }
+
+/* 플레이어 컨테이너 */
+.player-container {
+    background-color: #2a2a2a;
+}
+
+.player-name-side {
+    color: #e0e0e0;
+}
+
+.player-role {
+    color: #aaa;
+}
+
+/* 장기판 */
+.janggiboard {
+    background-color: #4a4a4a; /* 어두운 나무 색 */
+    border-color: #222;
+}
+
+.janggiboard::before {
+    background-image:
+        repeating-linear-gradient(#666 0 2px, transparent 2px 100%),
+        repeating-linear-gradient(90deg, #666 0 2px, transparent 2px 100%);
+}
+
+.square {
+    border-color: #666;
+}
+
+/* 게임 상태 */
+.game-status {
+    background-color: #1e1e1e;
+}
+
+#gameStatus {
+    color: #e0e0e0;
+}
+
+.captured-cho, .captured-han {
+    background-color: #2a2a2a;
+}
+
+.captured-cho h4, .captured-han h4 {
+    color: #e0e0e0;
+}
+
+/* 테마 토글 버튼 */
+.theme-toggle-btn {
+    background-color: #333;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+.theme-toggle-btn:hover {
+    background-color: #444;
+}
+
+/* 기물 */
+.piece.cho {
+    background-color: #03dac6; /* 다크모드 초록색 */
+    color: #121212;
+    border-color: #018786;
+}
+
+.piece.han {
+    background-color: #cf6679; /* 다크모드 빨간색 */
+    color: #121212;
+    border-color: #b00020;
+}
+
+/* 기물 선택/이동 */
+.square.selected .piece {
+    box-shadow: 0 0 15px 5px #f0e68c; /* 밝은 노란색 */
+}
+.square.valid-move {
+    background-color: rgba(3, 218, 198, 0.4);
+}
+.square.capture {
+    background-color: rgba(207, 102, 121, 0.5);
+}
+
+/* 플레이어 아바타 */
+.han-player .player-avatar { color: #cf6679; }
+.cho-player .player-avatar { color: #03dac6; }

@@ -577,10 +577,13 @@ header h1 {
     font-size: 3rem;
     user-select: none;
     transition: transform 0.2s ease;
+    color: #000000; /* 라이트모드에서 체스말을 검은색으로 명시 */
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .piece:hover {
     transform: scale(1.1);
+    text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.9);
 }
 
 /* 게임 상태 */
@@ -624,6 +627,8 @@ header h1 {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
+    color: #000000; /* 라이트모드에서 잡힌 말들도 검은색으로 명시 */
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 /* 반응형 디자인 */
@@ -645,6 +650,8 @@ header h1 {
     
     .piece {
         font-size: 2rem;
+        color: #000000; /* 모바일에서도 체스말을 검은색으로 명시 */
+        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
     }
     
     .game-info {
