@@ -1,0 +1,118 @@
+/* 다크 모드 스타일 */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --font-primary: 'Poppins', sans-serif;
+    --color-bg-start: #1D2B64; --color-bg-end: #0c0f20;
+    --color-surface-bg: rgba(255, 255, 255, 0.1);
+    --color-surface-border: rgba(255, 255, 255, 0.2);
+    --color-text-primary: #f0f0f0; --color-text-secondary: #a0a0c0;
+    --color-accent-primary: #f9a826; --color-accent-primary-dark: #f57f17;
+    --color-accent-secondary: #26a69a; --color-accent-secondary-dark: #00897b;
+    --color-accent-danger: #e53935;
+    --board-bg: #D2B48C; --board-lines: #4a382b;
+}
+
+body {
+    font-family: var(--font-primary);
+    background: linear-gradient(135deg, var(--color-bg-start), var(--color-bg-end));
+    color: var(--color-text-primary);
+}
+
+header h1 {
+    color: var(--color-text-primary);
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.theme-toggle-btn, .game-select-btn {
+    background: var(--color-surface-bg);
+    border: 2px solid var(--color-surface-border);
+    color: var(--color-text-primary);
+}
+
+.menu-content {
+    background: var(--color-surface-bg);
+    border: 1px solid var(--color-surface-border);
+    backdrop-filter: blur(10px);
+}
+.menu-content h2, .menu-content h3 { color: var(--color-text-primary); }
+.divider { color: var(--color-text-secondary); }
+
+.name-input, .room-code-input {
+    border: 2px solid var(--color-surface-border);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text-primary);
+}
+.name-input:focus { border-color: var(--color-accent-primary); box-shadow: 0 4px 15px rgba(249, 168, 38, 0.3); }
+.room-code-input:focus { border-color: var(--color-accent-secondary); box-shadow: 0 4px 15px rgba(38, 166, 154, 0.3); }
+
+.start-btn {
+    background: linear-gradient(45deg, var(--color-accent-primary), var(--color-accent-primary-dark));
+    box-shadow: 0 5px 15px rgba(249, 168, 38, 0.3);
+}
+.start-btn:hover { box-shadow: 0 8px 25px rgba(249, 168, 38, 0.4); }
+
+.join-btn {
+    background: linear-gradient(45deg, var(--color-accent-secondary), var(--color-accent-secondary-dark));
+    box-shadow: 0 5px 15px rgba(38, 166, 154, 0.3);
+}
+.join-btn:hover { box-shadow: 0 8px 25px rgba(38, 166, 154, 0.4); }
+
+.game-info {
+    background: var(--color-surface-bg);
+    border: 1px solid var(--color-surface-border);
+    backdrop-filter: blur(10px);
+}
+.player-turn { color: var(--color-text-primary); }
+.timer-label, .game-code-label { color: var(--color-text-secondary); }
+
+.timer {
+    color: var(--color-text-primary);
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--color-surface-border);
+}
+.timer.warning { color: var(--color-accent-danger); border-color: var(--color-accent-danger); }
+
+.game-code-display { background: rgba(0, 0, 0, 0.2); }
+.game-code { color: var(--color-text-primary); }
+.copy-btn { background: linear-gradient(135deg, var(--color-accent-secondary), var(--color-accent-secondary-dark)); }
+
+.start-game-btn { background: linear-gradient(45deg, var(--color-accent-primary), var(--color-accent-primary-dark)); }
+.reset-btn, .menu-btn { background: linear-gradient(45deg, var(--color-accent-secondary), var(--color-accent-secondary-dark)); }
+
+.player-container {
+    background: var(--color-surface-bg);
+    border: 1px solid var(--color-surface-border);
+    backdrop-filter: blur(10px);
+}
+.player-container.black-player { border: 2px solid #ccc; }
+.player-container.white-player { border: 2px solid #777; }
+.black-player .player-avatar { color: #eee; }
+.white-player .player-avatar { color: #bbb; }
+.player-name-side { color: var(--color-text-primary); }
+.player-role { color: var(--color-text-secondary); }
+
+.omokboard {
+    background-color: var(--board-bg);
+    border: 4px solid var(--board-lines);
+}
+.square::before, .square::after { background-color: var(--board-lines); }
+
+.game-status {
+    background: var(--color-surface-bg);
+    border: 1px solid var(--color-surface-border);
+    backdrop-filter: blur(10px);
+}
+#gameStatus { color: var(--color-text-primary); }
+
+/* 에러 상태 스타일 - 다크 모드 */
+.name-input.error,
+.room-code-input.error {
+    border-color: #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.1);
+}
+
+.name-input.error::placeholder,
+.room-code-input.error::placeholder {
+    color: #ff6b6b;
+}

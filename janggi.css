@@ -458,6 +458,45 @@ header h1 {
     border: 1px solid #a31e1e;
 }
 
+/* 게임 선택 버튼 */
+.game-select-container {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+
+.game-select-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 15px;
+    padding: 12px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    backdrop-filter: blur(10px);
+}
+
+.game-select-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.game-select-icon {
+    font-size: 18px;
+}
+
+.game-select-text {
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
 /* Responsive Design (from chess, adjusted for Janggi) */
 @media (max-width: 768px) {
     .janggiboard {
@@ -471,6 +510,18 @@ header h1 {
         height: 34px;
         font-size: 1.2rem;
     }
+    
+    /* 모바일에서 게임 선택 버튼 크기 조정 */
+    .game-select-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+        border-radius: 12px;
+    }
+    
+    .game-select-icon {
+        font-size: 14px;
+    }
+    
     .janggi-area {
         flex-direction: column;
         gap: 15px;

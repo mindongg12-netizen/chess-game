@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online Janggi</title>
-    <link rel="stylesheet" href="janggi.css" id="lightTheme">
-    <link rel="stylesheet" href="janggi(dark).css" id="darkTheme" disabled>
+    <title>Online Omok</title>
     
+    <!-- 외부 CSS 파일 연결 -->
+    <link rel="stylesheet" href="omok.css" id="lightTheme">
+    <link rel="stylesheet" href="omok(dark).css" id="darkTheme" disabled>
+    
+    <!-- Firebase 라이브러리 -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
 </head>
 <body>
-    <!-- 게임 선택 버튼 -->
     <div class="game-select-container">
         <button id="gameSelectBtn" class="game-select-btn" title="게임 선택" onclick="window.location.href='index.html'">
             <span class="game-select-icon">🎮</span>
@@ -28,19 +30,19 @@
 
     <div class="container">
         <header>
-            <h1>Online Janggi Game</h1>
+            <h1>Online Omok Game</h1>
         </header>
         
         <div class="game-menu" id="gameMenu">
             <div class="menu-content">
                 <h2>Made by 고성 상리초 T.Min</h2>
-                <h2>온라인 장기 게임에 오신 것을 환영합니다!</h2>
+                <h2>온라인 오목 게임에 오신 것을 환영합니다!</h2>
                 
                 <div class="create-room-section">
                     <h3>방 만들기</h3>
                     <div class="name-input-container">
                         <input type="text" id="hostNameInput" class="name-input" placeholder="이름" maxlength="10">
-                        <button id="startGameBtn" class="start-btn">방 만들기</button>
+                        <button id="createRoomBtn" class="start-btn">방 만들기</button>
                     </div>
                 </div>
                 
@@ -62,7 +64,7 @@
         <div class="game-container" id="gameContainer" style="display: none;">
             <div class="game-info">
                 <div class="player-turn">
-                    <span id="currentPlayer">초(楚)의 차례</span>
+                    <span id="currentPlayer">흑(黑)의 차례</span>
                 </div>
                 <div class="timer-container">
                     <div class="timer-label">남은 시간:</div>
@@ -82,43 +84,33 @@
                 </div>
             </div>
             
-            <div class="janggi-area">
-                 <div class="player-container han-player" id="hanPlayerContainer" style="display: none;">
-                    <div class="player-avatar">漢</div>
+            <div class="omok-area">
+                <div class="player-container white-player" id="whitePlayerContainer" style="display: none;">
+                    <div class="player-avatar">白</div>
                     <div class="player-info-side">
-                        <div class="player-name-side" id="hanPlayerName">-</div>
-                        <div class="player-role">한(漢)</div>
+                        <div class="player-name-side" id="whitePlayerName">-</div>
+                        <div class="player-role">백(白)</div>
                     </div>
                 </div>
                 
-                <div class="janggiboard" id="janggiboard">
-                    </div>
+                <div class="omokboard" id="omokboard"></div>
                 
-                <div class="player-container cho-player" id="choPlayerContainer" style="display: none;">
-                    <div class="player-avatar">楚</div>
+                <div class="player-container black-player" id="blackPlayerContainer" style="display: none;">
+                    <div class="player-avatar">黑</div>
                     <div class="player-info-side">
-                        <div class="player-name-side" id="choPlayerName">-</div>
-                        <div class="player-role">초(楚)</div>
+                        <div class="player-name-side" id="blackPlayerName">-</div>
+                        <div class="player-role">흑(黑)</div>
                     </div>
                 </div>
             </div>
             
             <div class="game-status">
                 <div id="gameStatus">게임이 진행 중입니다</div>
-                <div id="capturedPieces">
-                    <div class="captured-cho">
-                        <h4>잡힌 초(楚) 기물:</h4>
-                        <div id="capturedCho"></div>
-                    </div>
-                    <div class="captured-han">
-                        <h4>잡힌 한(漢) 기물:</h4>
-                        <div id="capturedHan"></div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
     
-    <script src="janggi.js"></script>
+    <!-- 외부 JS 파일 연결 -->
+    <script src="omok.js"></script>
 </body>
 </html>
