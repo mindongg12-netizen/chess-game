@@ -575,7 +575,7 @@ header h1 {
     justify-content: center;
     align-items: center;
     aspect-ratio: 1;
-    z-index: 5;
+    z-index: 10;
 }
 
 .square:hover {
@@ -593,22 +593,22 @@ header h1 {
 
 /* 오목돌 */
 .stone {
-    position: absolute;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-    z-index: 20;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: absolute !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
+    z-index: 40 !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
 }
 
 .stone.black {

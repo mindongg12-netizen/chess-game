@@ -11,16 +11,27 @@ class OmokGame {
         this.winningLine = null;
         this.hoveredCell = null;
         
-        // Firebase 관련
+        // 온라인 게임 속성 (janggi와 동일)
+        this.gameCode = null;
+        this.isOnlineGame = false;
+        this.isGameInProgress = false;
+        this.isRoomHost = false; // 흑돌
+        this.isRoomGuest = false; // 백돌
+        this.isMovePending = false;
+        
+        // 플레이어 이름
+        this.hostPlayerName = '';
+        this.guestPlayerName = '';
+        
+        // Firebase 실시간 통신
         this.database = null;
+        this.playerId = this.generatePlayerId();
         this.gameRef = null;
-        this.isHost = false;
-        this.playerName = '';
-        this.roomCode = '';
+        this.listeners = [];
         
         this.initializeElements();
         this.initializeEventListeners();
-        this.initializeFirebase();
+        this.waitForFirebase();
         this.createBoard();
     }
 
@@ -64,8 +75,8 @@ class OmokGame {
         // 메뉴 버튼들
         this.startGameBtn.addEventListener('click', () => this.createRoom());
         this.joinRoomBtn.addEventListener('click', () => this.joinRoom());
-        this.startGameBtnInRoom.addEventListener('click', () => this.startGame());
-        this.resetBtn.addEventListener('click', () => this.resetGame());
+        this.startGameBtnInRoom.addEventListener('click', () => this.startActualGame());
+        this.resetBtn.addEventListener('click', () => this.resetGameOnline());
         this.backToMenuBtn.addEventListener('click', () => this.backToMenu());
         this.copyCodeBtn.addEventListener('click', () => this.copyGameCode());
         
@@ -79,18 +90,31 @@ class OmokGame {
         this.roomCodeInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.joinRoom();
         });
+        
+        // 방 코드 입력 필드 숫자만 허용
+        this.roomCodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
     }
 
-    initializeFirebase() {
-        try {
-            if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-            this.database = firebase.database();
-                console.log('✅ Firebase 초기화 완료');
-            } else {
-                console.log('⚠️ Firebase 설정을 찾을 수 없습니다. 오프라인 모드로 실행됩니다.');
-            }
-        } catch (error) {
-            console.log('⚠️ Firebase 초기화 실패:', error);
+    generatePlayerId() {
+        return 'player_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    }
+
+    generateRoomCode() {
+        return Math.floor(10000 + Math.random() * 90000).toString();
+    }
+
+    waitForFirebase() {
+        if (window.firebaseReady && window.database) {
+            this.database = window.database;
+            console.log('🔥 Firebase Connection Complete');
+        } else {
+            console.log('⏳ Waiting for Firebase to load...');
+            document.addEventListener('firebaseReady', () => {
+                this.database = window.database;
+                console.log('🔥 Firebase Connection Complete (Event)');
+            });
         }
     }
 
@@ -103,9 +127,19 @@ class OmokGame {
                 square.className = 'square';
                 square.dataset.row = row;
                 square.dataset.col = col;
-                square.addEventListener('click', () => this.makeMove(row, col));
+                
+                // 클릭 이벤트 추가
+                square.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log(`클릭 이벤트: (${row}, ${col})`);
+                    this.makeMove(row, col);
+                });
+                
+                // 호버 이벤트 추가
                 square.addEventListener('mouseenter', () => this.onCellHover(row, col));
                 square.addEventListener('mouseleave', () => this.onCellLeave(row, col));
+                
                 this.omokboard.appendChild(square);
             }
         }
@@ -120,6 +154,7 @@ class OmokGame {
         console.log('보드 크기:', this.omokboard.offsetWidth, 'x', this.omokboard.offsetHeight);
         console.log('격자선 오버레이:', this.gridOverlay);
         console.log('별점 오버레이:', this.starPoints);
+        console.log('총 셀 개수:', this.omokboard.children.length);
         
         // 별점 위치 확인
         setTimeout(() => {
@@ -244,197 +279,283 @@ class OmokGame {
         }
     }
 
-    createRoom() {
-        const playerName = this.hostNameInput.value.trim();
-        if (!playerName) {
-            this.showError(this.hostNameInput, '이름을 입력해주세요');
+    async createRoom() {
+        const hostNameInput = document.getElementById('hostNameInput');
+        const hostName = hostNameInput.value.trim();
+        if (!hostName || hostName.length < 2) {
+            this.showError(hostNameInput, '이름을 2자 이상 입력하세요');
             return;
         }
-
-        this.playerName = playerName;
-        this.isHost = true;
-        this.roomCode = this.generateRoomCode();
         
-        if (this.database) {
-            this.gameRef = this.database.ref(`games/${this.roomCode}`);
-            this.setupFirebaseListeners();
-            this.gameRef.set({
-                host: playerName,
-                guest: null,
-                board: this.board,
-                currentPlayer: 'black',
+        if (!this.database) {
+            alert('Firebase에 연결 중입니다. 잠시 후 다시 시도해주세요.');
+            return;
+        }
+        
+        try {
+            this.gameCode = this.generateRoomCode();
+            this.hostPlayerName = hostName;
+            this.isRoomHost = true;
+            this.isRoomGuest = false;
+            this.isOnlineGame = true;
+            
+            const roomData = {
+                hostId: this.playerId,
+                hostName: hostName,
+                guestId: null,
+                guestName: null,
                 gameStarted: false,
-                gameEnded: false,
+                currentPlayer: 'black',
+                board: this.board,
                 lastMove: null,
-                createdAt: Date.now()
-            });
-        }
-
-        this.showGameContainer();
-        this.updatePlayerInfo();
-        this.gameCodeEl.textContent = this.roomCode;
-        this.gameCodeContainer.style.display = 'block';
-        this.startGameBtnInRoom.style.display = 'block';
-        
-        console.log(`✅ 방 생성 완료: ${this.roomCode}`);
-    }
-
-    joinRoom() {
-        const playerName = this.guestNameInput.value.trim();
-        const roomCode = this.roomCodeInput.value.trim();
-        
-        if (!playerName) {
-            this.showError(this.guestNameInput, '이름을 입력해주세요');
-            return;
-        }
-        
-        if (!roomCode || roomCode.length !== 5) {
-            this.showError(this.roomCodeInput, '올바른 5자리 코드를 입력해주세요');
-            return;
-        }
-
-        this.playerName = playerName;
-        this.roomCode = roomCode;
-        this.isHost = false;
-        
-        if (this.database) {
-            this.gameRef = this.database.ref(`games/${this.roomCode}`);
+                gameEnded: false,
+                winningLine: null,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            this.gameRef = this.database.ref('omok_games/' + this.gameCode);
+            await this.gameRef.set(roomData);
+            
+            document.getElementById('gameMenu').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            this.showGameCode();
+            this.updatePlayerInfo();
+            this.showWaitingState();
             this.setupFirebaseListeners();
             
-            this.gameRef.once('value', (snapshot) => {
-                const gameData = snapshot.val();
-                if (!gameData) {
-                    this.showError(this.roomCodeInput, '존재하지 않는 방입니다');
-                    return;
-                }
-                
-                if (gameData.guest) {
-                    this.showError(this.roomCodeInput, '이미 가득 찬 방입니다');
-                    return;
-                }
-                
-                this.gameRef.update({ guest: playerName });
-                this.showGameContainer();
-                this.updatePlayerInfo();
-                this.gameCodeContainer.style.display = 'block';
-                
-                console.log(`✅ 방 참가 완료: ${this.roomCode}`);
+            console.log(`✅ 방 생성 완료: ${this.gameCode}`);
+        } catch (error) {
+            console.error('❌ Failed to create room:', error);
+            alert('방 만들기에 실패했습니다: ' + error.message);
+        }
+    }
+
+    async joinRoom() {
+        const guestNameInput = document.getElementById('guestNameInput');
+        const guestName = guestNameInput.value.trim();
+        const codeInput = document.getElementById('roomCodeInput');
+        const enteredCode = codeInput.value.trim();
+        
+        if (guestName.length < 2) {
+            this.showError(guestNameInput, '이름을 2자 이상 입력하세요');
+            return;
+        }
+        if (enteredCode.length !== 5 || !/^\d{5}$/.test(enteredCode)) {
+            this.showError(codeInput, '5자리 숫자 코드를 입력하세요');
+            return;
+        }
+        if (!this.database) {
+            alert('서버 연결 중...');
+            return;
+        }
+        
+        try {
+            this.gameCode = enteredCode;
+            this.gameRef = this.database.ref('omok_games/' + this.gameCode);
+            const snapshot = await this.gameRef.once('value');
+            const roomData = snapshot.val();
+            
+            if (!roomData) throw new Error('존재하지 않는 방입니다');
+            if (roomData.guestId) throw new Error('방이 가득 찼습니다');
+            
+            await this.gameRef.update({
+                guestId: this.playerId,
+                guestName: guestName,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
-        } else {
-            // 오프라인 모드
-            this.showGameContainer();
+            
+            this.guestPlayerName = guestName;
+            this.isRoomGuest = true;
+            this.isRoomHost = false;
+            this.isOnlineGame = true;
+            
+            document.getElementById('gameMenu').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            this.showGameCode();
             this.updatePlayerInfo();
-            this.startGame();
+            this.setupFirebaseListeners();
+            
+            console.log(`✅ 방 참가 완료: ${this.gameCode}`);
+        } catch (error) {
+            console.error('❌ Failed to join room:', error);
+            this.showError(codeInput, error.message);
         }
     }
 
     setupFirebaseListeners() {
         if (!this.gameRef) return;
-
-        this.gameRef.on('value', (snapshot) => {
+        
+        const gameListener = this.gameRef.on('value', (snapshot) => {
             const gameData = snapshot.val();
-            if (!gameData) return;
-
-            this.board = gameData.board || this.board;
-            this.currentPlayer = gameData.currentPlayer || 'black';
-            this.gameStarted = gameData.gameStarted || false;
-            this.gameEnded = gameData.gameEnded || false;
-            this.lastMove = gameData.lastMove;
-
-            this.updateBoard();
-            this.updateCurrentPlayer();
-            this.updateGameStatus();
+            if (!gameData) {
+                alert('게임 방이 사라졌습니다. 메인 메뉴로 돌아갑니다.');
+                this.backToMenu();
+                return;
+            }
             
-            if (this.gameStarted && !this.gameEnded) {
-                this.startTimer();
-            } else {
-                this.stopTimer();
+            this.hostPlayerName = gameData.hostName;
+            if (gameData.guestId && !this.guestPlayerName) {
+                this.guestPlayerName = gameData.guestName;
+                if (this.isRoomHost) {
+                    this.showWaitingState();
+                }
+            }
+            this.updatePlayerInfo();
+
+            if (gameData.board) this.syncBoard(gameData.board);
+
+            if (gameData.currentPlayer !== this.currentPlayer) {
+                this.currentPlayer = gameData.currentPlayer;
+                this.updateCurrentPlayer();
+                this.restartTimer();
+            }
+            
+            this.isMovePending = false;
+            
+            if (gameData.gameStarted && !this.isGameInProgress) {
+                this.handleGameStart();
+            }
+            if (gameData.gameEnded && this.isGameInProgress) {
+                this.endGame(gameData.winner);
+            }
+            if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
+                if (!this.isGameInProgress || !this.gameStarted) {
+                    this.handleGameRestart(gameData);
+                }
             }
         });
+        this.listeners.push({ ref: this.gameRef, listener: gameListener });
     }
 
-    startGame() {
-        if (!this.isHost) return;
-        
+    showGameCode() {
+        this.gameCodeEl.textContent = this.gameCode;
+        this.gameCodeContainer.style.display = 'block';
+    }
+
+    showWaitingState() {
+        this.startGameBtnInRoom.style.display = 'block';
+        this.resetBtn.style.display = 'none';
+    }
+
+    syncBoard(remoteBoard) {
+        this.board = remoteBoard;
+        this.updateBoard();
+    }
+
+    handleGameStart() {
         this.gameStarted = true;
-        this.currentPlayer = 'black';
-        this.startTimer();
-        
-        if (this.gameRef) {
-            this.gameRef.update({
-                gameStarted: true,
-                currentPlayer: 'black'
-            });
-        }
-        
+        this.isGameInProgress = true;
         this.startGameBtnInRoom.style.display = 'none';
         this.resetBtn.style.display = 'block';
+        this.startTimer();
         this.updateCurrentPlayer();
         this.updateGameStatus();
-        
-        console.log('✅ 게임 시작');
+        console.log('✅ 게임 시작됨');
     }
 
-    makeMove(row, col) {
-        if (!this.gameStarted || this.gameEnded) return;
+    handleGameRestart(gameData) {
+        this.board = gameData.board;
+        this.currentPlayer = gameData.currentPlayer;
+        this.gameStarted = true;
+        this.isGameInProgress = true;
+        this.gameEnded = false;
+        this.winningLine = null;
+        this.startGameBtnInRoom.style.display = 'none';
+        this.resetBtn.style.display = 'block';
+        this.startTimer();
+        this.updateBoard();
+        this.updateCurrentPlayer();
+        this.updateGameStatus();
+        console.log('✅ 게임 재시작됨');
+    }
+
+    endGame(winner) {
+        this.gameEnded = true;
+        this.isGameInProgress = false;
+        this.stopTimer();
+        this.updateGameStatus();
+        console.log('✅ 게임 종료:', winner);
+    }
+
+    async startActualGame() {
+        if (!this.isRoomHost || !this.guestPlayerName) return;
+        
+        try {
+            await this.gameRef.update({
+                gameStarted: true,
+                isGameInProgress: true,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
+            });
+        } catch (error) {
+            console.error('❌ Game start failed:', error);
+            alert('게임 시작에 실패했습니다: ' + error.message);
+        }
+    }
+
+    async makeMove(row, col) {
+        if (!this.isGameInProgress || this.isMovePending) return;
         if (this.board[row][col] !== null) return;
         
-        // 턴 체크 (오프라인 모드에서는 무시)
-        if (this.database && this.isHost && this.currentPlayer !== 'black') return;
-        if (this.database && !this.isHost && this.currentPlayer !== 'white') return;
+        // 턴 체크
+        const isMyTurn = (this.isRoomHost && this.currentPlayer === 'black') || 
+                        (this.isRoomGuest && this.currentPlayer === 'white');
+        if (!isMyTurn) return;
         
+        this.isMovePending = true;
         this.board[row][col] = this.currentPlayer;
         this.lastMove = { row, col };
         
         // 승리 체크
         const winResult = this.checkWin(row, col);
         if (winResult.win) {
-            this.gameEnded = true;
             this.winningLine = winResult.line;
-            this.stopTimer();
-            this.updateGameStatus();
+            const winner = this.currentPlayer;
             
-            if (this.gameRef) {
-                this.gameRef.update({
+            try {
+                await this.gameRef.update({
                     board: this.board,
                     gameEnded: true,
+                    winner: winner,
                     lastMove: this.lastMove,
-                    winningLine: this.winningLine
+                    winningLine: this.winningLine,
+                    lastActivity: firebase.database.ServerValue.TIMESTAMP
                 });
+            } catch (error) {
+                console.error('❌ Move update failed:', error);
             }
             return;
         }
         
         // 무승부 체크
         if (this.isBoardFull()) {
-            this.gameEnded = true;
-            this.stopTimer();
-            this.updateGameStatus();
-            
-            if (this.gameRef) {
-                this.gameRef.update({
+            try {
+                await this.gameRef.update({
                     board: this.board,
                     gameEnded: true,
-                    lastMove: this.lastMove
+                    winner: null,
+                    lastMove: this.lastMove,
+                    lastActivity: firebase.database.ServerValue.TIMESTAMP
                 });
+            } catch (error) {
+                console.error('❌ Move update failed:', error);
             }
             return;
         }
         
         // 턴 변경
-        this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
-        this.restartTimer();
+        const nextPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
         
-        if (this.gameRef) {
-            this.gameRef.update({
+        try {
+            await this.gameRef.update({
                 board: this.board,
-                currentPlayer: this.currentPlayer,
-                lastMove: this.lastMove
+                currentPlayer: nextPlayer,
+                lastMove: this.lastMove,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
+        } catch (error) {
+            console.error('❌ Move update failed:', error);
+            this.isMovePending = false;
         }
-        
-        this.updateBoard();
-        this.updateCurrentPlayer();
     }
 
     checkWin(row, col) {
@@ -497,25 +618,61 @@ class OmokGame {
     }
 
     updateBoard() {
+        console.log('updateBoard 호출');
+        console.log('보드 상태:', this.board);
+        
         for (let row = 0; row < 19; row++) {
             for (let col = 0; col < 19; col++) {
                 const square = this.omokboard.children[row * 19 + col];
+                if (!square) {
+                    console.log(`Square not found at (${row}, ${col})`);
+                    continue;
+                }
+                
                 square.innerHTML = '';
                 
                 // 기존 클래스 제거
                 square.classList.remove('last-move', 'disabled');
                 
                 if (this.board[row][col]) {
+                    console.log(`돌 생성: (${row}, ${col}) = ${this.board[row][col]}`);
                     const stone = document.createElement('div');
                     stone.className = `stone ${this.board[row][col]}`;
                     stone.textContent = this.board[row][col] === 'black' ? '●' : '○';
                     
+                    // 인라인 스타일로 강제 적용
+                    stone.style.cssText = `
+                        position: absolute !important;
+                        width: 24px !important;
+                        height: 24px !important;
+                        border-radius: 50% !important;
+                        display: flex !important;
+                        justify-content: center !important;
+                        align-items: center !important;
+                        font-size: 14px !important;
+                        font-weight: bold !important;
+                        cursor: pointer !important;
+                        transition: all 0.2s ease !important;
+                        box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
+                        z-index: 40 !important;
+                        top: 50% !important;
+                        left: 50% !important;
+                        transform: translate(-50%, -50%) !important;
+                        ${this.board[row][col] === 'black' ? 
+                            'background: radial-gradient(circle at 30% 30%, #666, #000) !important; color: white !important; text-shadow: 1px 1px 2px rgba(255,255,255,0.3) !important;' :
+                            'background: radial-gradient(circle at 30% 30%, #fff, #e0e0e0) !important; color: black !important; text-shadow: 1px 1px 2px rgba(0,0,0,0.3) !important; border: 1px solid #ccc !important;'
+                        }
+                    `;
+                    
                     // 승리 라인에 포함된 돌인지 확인
                     if (this.winningLine && this.winningLine.some(pos => pos.row === row && pos.col === col)) {
                         stone.classList.add('winning');
+                        stone.style.animation = 'pulse 1s infinite !important';
+                        stone.style.boxShadow = '0 0 0 4px #ff6b6b, 0 4px 8px rgba(0,0,0,0.3) !important';
                     }
                     
                     square.appendChild(stone);
+                    console.log(`돌 추가 완료: (${row}, ${col})`);
                 }
                 
                 // 마지막 수 표시
@@ -529,6 +686,8 @@ class OmokGame {
                 }
             }
         }
+        
+        console.log('updateBoard 완료');
     }
 
     updateCurrentPlayer() {
@@ -554,25 +713,25 @@ class OmokGame {
                 const winner = this.currentPlayer === 'black' ? '흑(黑)' : '백(白)';
                 this.gameStatusEl.textContent = `${winner} 승리!`;
             }
-        } else if (this.gameStarted) {
+        } else if (this.isGameInProgress) {
             this.gameStatusEl.textContent = '게임이 진행 중입니다';
+        } else if (this.isOnlineGame && !this.guestPlayerName) {
+            this.gameStatusEl.textContent = '상대방을 기다리는 중...';
         } else {
             this.gameStatusEl.textContent = '게임을 시작하세요';
         }
     }
 
     updatePlayerInfo() {
-        if (this.isHost) {
-            this.blackPlayerNameEl.textContent = this.playerName;
-            this.whitePlayerNameEl.textContent = '대기중';
-            this.blackPlayerContainer.style.display = 'flex';
-            this.whitePlayerContainer.style.display = 'flex';
+        if (this.isRoomHost) {
+            this.blackPlayerNameEl.textContent = this.hostPlayerName;
+            this.whitePlayerNameEl.textContent = this.guestPlayerName || '대기중';
         } else {
-            this.whitePlayerNameEl.textContent = this.playerName;
-            this.blackPlayerNameEl.textContent = '대기중';
-            this.blackPlayerContainer.style.display = 'flex';
-            this.whitePlayerContainer.style.display = 'flex';
+            this.whitePlayerNameEl.textContent = this.guestPlayerName;
+            this.blackPlayerNameEl.textContent = this.hostPlayerName;
         }
+        this.blackPlayerContainer.style.display = 'flex';
+        this.whitePlayerContainer.style.display = 'flex';
     }
 
     startTimer() {
@@ -627,6 +786,30 @@ class OmokGame {
         this.startTimer();
     }
 
+    async resetGameOnline() {
+        if (!this.gameRef || !this.isOnlineGame) {
+            this.resetGame();
+            return;
+        }
+        try {
+            await this.gameRef.update({
+                board: Array(19).fill().map(() => Array(19).fill(null)),
+                currentPlayer: 'black',
+                gameStarted: true,
+                isGameInProgress: true,
+                gameEnded: false,
+                winner: null,
+                lastMove: null,
+                winningLine: null,
+                gameRestarted: firebase.database.ServerValue.TIMESTAMP,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
+            });
+        } catch (error) {
+            console.error('❌ Game restart failed:', error);
+            alert('게임 재시작에 실패했습니다: ' + error.message);
+        }
+    }
+
     resetGame() {
         this.board = Array(19).fill().map(() => Array(19).fill(null));
         this.currentPlayer = 'black';
@@ -636,54 +819,51 @@ class OmokGame {
         this.winningLine = null;
         this.hoveredCell = null;
         this.stopTimer();
-        
-        if (this.gameRef) {
-            this.gameRef.update({
-                board: this.board,
-                currentPlayer: 'black',
-                gameStarted: false,
-                gameEnded: false,
-                lastMove: null
-            });
-        }
-        
         this.updateBoard();
         this.updateCurrentPlayer();
         this.updateGameStatus();
         this.startGameBtnInRoom.style.display = 'block';
         this.resetBtn.style.display = 'none';
-        
-        console.log('✅ 게임 재시작');
     }
 
     backToMenu() {
-        this.stopTimer();
-        
-        if (this.gameRef) {
-            this.gameRef.off();
-            if (this.isHost) {
-                this.gameRef.remove();
-            } else {
-                this.gameRef.update({ guest: null });
-            }
+        // Clean up Firebase listeners to prevent memory leaks
+        if (this.gameRef && this.listeners.length > 0) {
+            this.listeners.forEach(({ ref, listener }) => ref.off('value', listener));
+            this.listeners = [];
+            this.gameRef = null;
         }
-        
-        this.gameMenu.style.display = 'flex';
-        this.gameContainer.style.display = 'none';
+
+        this.stopTimer();
         this.gameCodeContainer.style.display = 'none';
         this.startGameBtnInRoom.style.display = 'none';
         this.resetBtn.style.display = 'none';
+        this.blackPlayerContainer.style.display = 'none';
+        this.whitePlayerContainer.style.display = 'none';
         
         // 입력 필드 초기화
         this.hostNameInput.value = '';
         this.guestNameInput.value = '';
         this.roomCodeInput.value = '';
         
+        document.getElementById('gameContainer').style.display = 'none';
+        document.getElementById('gameMenu').style.display = 'block';
+        
+        // 상태 초기화
+        this.gameStarted = false;
+        this.isGameInProgress = false;
+        this.isRoomHost = false;
+        this.isRoomGuest = false;
+        this.isOnlineGame = false;
+        this.hostPlayerName = '';
+        this.guestPlayerName = '';
+        this.gameCode = null;
+        
         console.log('✅ 메인 메뉴로 돌아가기');
     }
 
     copyGameCode() {
-        navigator.clipboard.writeText(this.roomCode).then(() => {
+        navigator.clipboard.writeText(this.gameCode).then(() => {
             this.copyCodeBtn.textContent = '✓';
             setTimeout(() => {
                 this.copyCodeBtn.textContent = '📋';
