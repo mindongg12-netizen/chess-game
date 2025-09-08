@@ -623,6 +623,9 @@ class OmokGame {
         
         console.log('🔄 게임 상태 초기화 완료');
         
+        // 모든 돌 완전 제거
+        this.clearAllStones();
+        
         // UI 업데이트
         this.startGameBtnInRoom.style.display = 'none';
         this.resetBtn.style.display = 'block';
@@ -1187,6 +1190,12 @@ class OmokGame {
             this.winningLine = null;
         }
         
+        // 게임 재시작 시 모든 돌 완전 제거
+        if (!this.gameEnded && this.board.every(row => row.every(cell => cell === null))) {
+            console.log('🔄 게임 재시작 감지, 모든 돌 완전 제거');
+            this.clearAllStones();
+        }
+        
         let stoneCount = 0;
         for (let row = 0; row < 19; row++) {
             for (let col = 0; col < 19; col++) {
@@ -1279,6 +1288,49 @@ class OmokGame {
         }
         
         console.log(`✅ updateBoard 완료 - 총 ${stoneCount}개 돌 렌더링`);
+    }
+    
+    clearAllStones() {
+        console.log('🧹 clearAllStones 호출 - 모든 돌 완전 제거');
+        
+        // 모든 square에서 돌 제거
+        for (let row = 0; row < 19; row++) {
+            for (let col = 0; col < 19; col++) {
+                const squareIndex = row * 19 + col;
+                const square = this.omokboard.children[squareIndex];
+                
+                if (square) {
+                    // 모든 자식 요소 제거
+                    square.innerHTML = '';
+                    
+                    // 모든 관련 클래스 제거
+                    square.classList.remove('last-move', 'disabled', 'winning');
+                    
+                    // 스타일 초기화
+                    square.style.cssText = '';
+                    
+                    // 돌 관련 모든 요소 강제 제거
+                    const stones = square.querySelectorAll('.stone');
+                    stones.forEach(stone => {
+                        stone.remove();
+                    });
+                    
+                    // 호버 효과 제거
+                    const hoverElements = square.querySelectorAll('.hover-preview');
+                    hoverElements.forEach(element => {
+                        element.remove();
+                    });
+                }
+            }
+        }
+        
+        // 추가적인 정리
+        const allStones = this.omokboard.querySelectorAll('.stone');
+        allStones.forEach(stone => {
+            stone.remove();
+        });
+        
+        console.log('✅ clearAllStones 완료 - 모든 돌 제거됨');
     }
 
     updateCurrentPlayer() {
@@ -1469,6 +1521,9 @@ class OmokGame {
         
         // 타이머 정지
         this.stopTimer();
+        
+        // 모든 돌 완전 제거
+        this.clearAllStones();
         
         // UI 업데이트
         this.updateBoard();
