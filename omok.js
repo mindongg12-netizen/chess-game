@@ -598,8 +598,6 @@ class OmokGame {
 
     handleGameRestart(gameData) {
         console.log('🔄 handleGameRestart 호출됨');
-        console.log('🔄 gameData:', gameData);
-        console.log('🔄 resetFromPopup:', gameData.resetFromPopup);
         
         // 팝업에서 리셋된 경우 기존 팝업 제거
         if (gameData.resetFromPopup) {
@@ -623,17 +621,14 @@ class OmokGame {
         
         console.log('🔄 게임 상태 초기화 완료');
         
-        // 모든 돌 완전 제거
         this.clearAllStones();
         
         // UI 업데이트
         this.startGameBtnInRoom.style.display = 'none';
         this.resetBtn.style.display = 'block';
         
-        // 타이머 시작
         this.startTimer();
         
-        // 보드 및 상태 업데이트
         this.updateBoard();
         this.updateCurrentPlayer();
         this.updateGameStatus();
@@ -1431,9 +1426,6 @@ class OmokGame {
 
     async resetGameFromPopup() {
         console.log('🔄 resetGameFromPopup 호출됨 (팝업에서 다시 하기)');
-        console.log('🔄 isOnlineGame:', this.isOnlineGame);
-        console.log('🔄 gameRef:', this.gameRef);
-        
         if (!this.gameRef || !this.isOnlineGame) {
             console.log('🔄 오프라인 모드, 로컬만 초기화');
             this.resetGame();
@@ -1444,8 +1436,8 @@ class OmokGame {
             console.log('🔄 Firebase를 통한 양쪽 플레이어 게임 재시작 시작');
             const newBoard = Array(19).fill().map(() => Array(19).fill(null));
             
-            // Firebase에 게임 재시작 신호 전송 (양쪽 플레이어 모두 동기화)
-            await this.gameRef.update({
+            // Firebase에 게임 재시작 신호 전송
+            const updates = {
                 board: newBoard,
                 currentPlayer: 'black',
                 gameStarted: true,
@@ -1457,7 +1449,17 @@ class OmokGame {
                 gameRestarted: firebase.database.ServerValue.TIMESTAMP,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP,
                 resetFromPopup: true  // 팝업에서 리셋했음을 표시
-            });
+            };
+            
+            await this.gameRef.update(updates);
+            
+            // 중요: 잠시 후 resetFromPopup 플래그를 제거하여 다음 게임에 영향을 주지 않도록 합니다.
+            // 방장(host)만 이 작업을 수행하여 중복 실행을 방지합니다.
+            if (this.isRoomHost) {
+                setTimeout(() => {
+                    this.gameRef.child('resetFromPopup').remove();
+                }, 1500); // 1.5초 지연
+            }
             
             console.log('✅ Firebase를 통한 양쪽 플레이어 게임 재시작 완료');
         } catch (error) {
