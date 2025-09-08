@@ -410,42 +410,54 @@ class OmokGame {
         if (!this.gameRef) return;
         
         const gameListener = this.gameRef.on('value', (snapshot) => {
-            const gameData = snapshot.val();
-            if (!gameData) {
-                alert('게임 방이 사라졌습니다. 메인 메뉴로 돌아갑니다.');
-                this.backToMenu();
-                return;
-            }
-            
-            this.hostPlayerName = gameData.hostName;
-            if (gameData.guestId && !this.guestPlayerName) {
-                this.guestPlayerName = gameData.guestName;
-                if (this.isRoomHost) {
-                    this.showWaitingState();
+            try {
+                const gameData = snapshot.val();
+                if (!gameData) {
+                    alert('게임 방이 사라졌습니다. 메인 메뉴로 돌아갑니다.');
+                    this.backToMenu();
+                    return;
                 }
-            }
-            this.updatePlayerInfo();
-
-            if (gameData.board) this.syncBoard(gameData.board);
-
-            if (gameData.currentPlayer !== this.currentPlayer) {
-                this.currentPlayer = gameData.currentPlayer;
-                this.updateCurrentPlayer();
-                this.restartTimer();
-            }
-            
-            this.isMovePending = false;
-            
-            if (gameData.gameStarted && !this.isGameInProgress) {
-                this.handleGameStart();
-            }
-            if (gameData.gameEnded && this.isGameInProgress) {
-                this.endGame(gameData.winner);
-            }
-            if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
-                if (!this.isGameInProgress || !this.gameStarted) {
-                    this.handleGameRestart(gameData);
+                
+                console.log('🔥 Firebase 데이터 수신:', gameData);
+                
+                this.hostPlayerName = gameData.hostName || '';
+                if (gameData.guestId && !this.guestPlayerName) {
+                    this.guestPlayerName = gameData.guestName || '';
+                    if (this.isRoomHost) {
+                        this.showWaitingState();
+                    }
                 }
+                this.updatePlayerInfo();
+
+                // 안전한 보드 동기화
+                if (gameData.board) {
+                    this.syncBoard(gameData.board);
+                }
+
+                // 안전한 현재 플레이어 업데이트
+                if (gameData.currentPlayer && gameData.currentPlayer !== this.currentPlayer) {
+                    this.currentPlayer = gameData.currentPlayer;
+                    this.updateCurrentPlayer();
+                    this.restartTimer();
+                }
+                
+                this.isMovePending = false;
+                
+                // 안전한 게임 상태 업데이트
+                if (gameData.gameStarted && !this.isGameInProgress) {
+                    this.handleGameStart();
+                }
+                if (gameData.gameEnded && this.isGameInProgress) {
+                    this.endGame(gameData.winner);
+                }
+                if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
+                    if (!this.isGameInProgress || !this.gameStarted) {
+                        this.handleGameRestart(gameData);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Firebase 리스너 오류:', error);
+                console.error('오류 발생 시 게임 데이터:', snapshot.val());
             }
         });
         this.listeners.push({ ref: this.gameRef, listener: gameListener });
@@ -462,7 +474,17 @@ class OmokGame {
     }
 
     syncBoard(remoteBoard) {
-        this.board = remoteBoard;
+        console.log('🔄 syncBoard 호출');
+        console.log('원격 보드:', remoteBoard);
+        
+        // 안전한 보드 동기화
+        if (remoteBoard && Array.isArray(remoteBoard) && remoteBoard.length === 19) {
+            this.board = remoteBoard;
+            console.log('✅ 보드 동기화 완료');
+        } else {
+            console.log('❌ 원격 보드가 유효하지 않음, 현재 보드 유지');
+        }
+        
         this.updateBoard();
     }
 
@@ -564,6 +586,11 @@ class OmokGame {
         
         console.log('✅ 수를 둘 수 있음, 돌 배치 시작');
         this.isMovePending = true;
+        
+        // 안전한 보드 업데이트
+        if (!this.board[row]) {
+            this.board[row] = Array(19).fill(null);
+        }
         this.board[row][col] = this.currentPlayer;
         this.lastMove = { row, col };
         
@@ -649,6 +676,11 @@ class OmokGame {
     }
 
     checkWin(row, col) {
+        // 안전한 보드 체크
+        if (!this.board || !this.board[row] || this.board[row][col] === null) {
+            return { win: false, line: null };
+        }
+        
         const directions = [
             [0, 1],   // 가로
             [1, 0],   // 세로
@@ -667,7 +699,7 @@ class OmokGame {
                 const newRow = row + dx * i;
                 const newCol = col + dy * i;
                 if (newRow >= 0 && newRow < 19 && newCol >= 0 && newCol < 19 && 
-                    this.board[newRow][newCol] === player) {
+                    this.board[newRow] && this.board[newRow][newCol] === player) {
                     count++;
                     line.push({ row: newRow, col: newCol });
                 } else {
@@ -680,7 +712,7 @@ class OmokGame {
                 const newRow = row - dx * i;
                 const newCol = col - dy * i;
                 if (newRow >= 0 && newRow < 19 && newCol >= 0 && newCol < 19 && 
-                    this.board[newRow][newCol] === player) {
+                    this.board[newRow] && this.board[newRow][newCol] === player) {
                     count++;
                     line.unshift({ row: newRow, col: newCol });
                 } else {
@@ -697,7 +729,14 @@ class OmokGame {
     }
 
     isBoardFull() {
+        if (!this.board || !Array.isArray(this.board)) {
+            return false;
+        }
+        
         for (let row = 0; row < 19; row++) {
+            if (!this.board[row] || !Array.isArray(this.board[row])) {
+                return false;
+            }
             for (let col = 0; col < 19; col++) {
                 if (this.board[row][col] === null) {
                     return false;
@@ -711,6 +750,18 @@ class OmokGame {
         console.log('🔄 updateBoard 호출');
         console.log('보드 상태:', this.board);
         console.log('omokboard 자식 개수:', this.omokboard.children.length);
+        
+        // 안전한 보드 초기화 체크
+        if (!this.board || !Array.isArray(this.board) || this.board.length !== 19) {
+            console.log('❌ 보드가 올바르게 초기화되지 않음, 재초기화');
+            this.board = Array(19).fill().map(() => Array(19).fill(null));
+        }
+        
+        // 안전한 winningLine 체크
+        if (this.winningLine && !Array.isArray(this.winningLine)) {
+            console.log('❌ winningLine이 배열이 아님, 초기화');
+            this.winningLine = null;
+        }
         
         let stoneCount = 0;
         for (let row = 0; row < 19; row++) {
@@ -728,7 +779,8 @@ class OmokGame {
                 // 기존 클래스 제거
                 square.classList.remove('last-move', 'disabled');
                 
-                if (this.board[row][col]) {
+                // 안전한 보드 값 체크
+                if (this.board[row] && this.board[row][col]) {
                     stoneCount++;
                     console.log(`🪨 돌 생성: (${row}, ${col}) = ${this.board[row][col]}`);
                     const stone = document.createElement('div');
@@ -759,11 +811,16 @@ class OmokGame {
                         }
                     `;
                     
-                    // 승리 라인에 포함된 돌인지 확인
-                    if (this.winningLine && this.winningLine.some(pos => pos.row === row && pos.col === col)) {
-                        stone.classList.add('winning');
-                        stone.style.animation = 'pulse 1s infinite !important';
-                        stone.style.boxShadow = '0 0 0 4px #ff6b6b, 0 4px 8px rgba(0,0,0,0.3) !important';
+                    // 안전한 승리 라인 체크
+                    if (this.winningLine && Array.isArray(this.winningLine) && this.winningLine.length > 0) {
+                        const isWinningStone = this.winningLine.some(pos => 
+                            pos && typeof pos === 'object' && pos.row === row && pos.col === col
+                        );
+                        if (isWinningStone) {
+                            stone.classList.add('winning');
+                            stone.style.animation = 'pulse 1s infinite !important';
+                            stone.style.boxShadow = '0 0 0 4px #ff6b6b, 0 4px 8px rgba(0,0,0,0.3) !important';
+                        }
                     }
                     
                     square.appendChild(stone);
