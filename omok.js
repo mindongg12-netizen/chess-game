@@ -618,6 +618,137 @@ class OmokGame {
         this.stopTimer();
         this.updateGameStatus();
         console.log('✅ 게임 종료:', winner);
+        
+        // 승리 팝업 표시
+        this.showWinPopup(winner);
+    }
+    
+    showWinPopup(winner) {
+        // 기존 팝업이 있으면 제거
+        const existingPopup = document.getElementById('winPopup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+        
+        // 팝업 생성
+        const popup = document.createElement('div');
+        popup.id = 'winPopup';
+        popup.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        `;
+        
+        const popupContent = document.createElement('div');
+        popupContent.style.cssText = `
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            color: white;
+            max-width: 400px;
+            width: 90%;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        let message = '';
+        let emoji = '';
+        
+        if (winner === null) {
+            message = '무승부입니다!';
+            emoji = '🤝';
+        } else {
+            const winnerName = winner === 'black' ? 
+                (this.isRoomHost ? this.hostPlayerName : this.guestPlayerName) :
+                (this.isRoomGuest ? this.guestPlayerName : this.hostPlayerName);
+            
+            message = `${winnerName}님이 승리했습니다!`;
+            emoji = winner === 'black' ? '⚫' : '⚪';
+        }
+        
+        popupContent.innerHTML = `
+            <div style="font-size: 4rem; margin-bottom: 20px;">${emoji}</div>
+            <h2 style="font-size: 2rem; margin-bottom: 20px; font-weight: bold;">${message}</h2>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+                <button id="playAgainBtn" style="
+                    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 25px;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+                ">다시 하기</button>
+                <button id="closePopupBtn" style="
+                    background: linear-gradient(45deg, #4ecdc4, #44a08d);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 25px;
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+                ">닫기</button>
+            </div>
+        `;
+        
+        popup.appendChild(popupContent);
+        document.body.appendChild(popup);
+        
+        // 버튼 이벤트 리스너
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            popup.remove();
+            this.resetGameOnline();
+        });
+        
+        document.getElementById('closePopupBtn').addEventListener('click', () => {
+            popup.remove();
+        });
+        
+        // 배경 클릭 시 닫기
+        popup.addEventListener('click', (e) => {
+            if (e.target === popup) {
+                popup.remove();
+            }
+        });
+        
+        // CSS 애니메이션 추가
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideIn {
+                from { 
+                    opacity: 0;
+                    transform: translateY(-50px) scale(0.9);
+                }
+                to { 
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+            #playAgainBtn:hover, #closePopupBtn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     async startActualGame() {
@@ -694,10 +825,10 @@ class OmokGame {
         if (winResult.win) {
             console.log('🎉 승리!');
             this.winningLine = winResult.line;
-            this.gameEnded = true;
-            this.isGameInProgress = false;
-            this.stopTimer();
-            this.updateGameStatus();
+            const winner = this.currentPlayer;
+            
+            // 로컬에서 즉시 게임 종료 처리
+            this.endGame(winner);
             
             if (this.isOnlineGame && this.gameRef) {
                 try {
@@ -708,7 +839,7 @@ class OmokGame {
                     await this.gameRef.update({
                         board: boardForFirebase,
                         gameEnded: true,
-                        winner: this.currentPlayer,
+                        winner: winner,
                         lastMove: this.lastMove,
                         winningLine: this.winningLine,
                         lastActivity: firebase.database.ServerValue.TIMESTAMP
@@ -723,10 +854,9 @@ class OmokGame {
         // 무승부 체크
         if (this.isBoardFull()) {
             console.log('🤝 무승부!');
-            this.gameEnded = true;
-            this.isGameInProgress = false;
-            this.stopTimer();
-            this.updateGameStatus();
+            
+            // 로컬에서 즉시 게임 종료 처리
+            this.endGame(null);
             
             if (this.isOnlineGame && this.gameRef) {
                 try {
@@ -738,8 +868,8 @@ class OmokGame {
                         board: boardForFirebase,
                         gameEnded: true,
                         winner: null,
-                    lastMove: this.lastMove,
-                    lastActivity: firebase.database.ServerValue.TIMESTAMP
+                        lastMove: this.lastMove,
+                        lastActivity: firebase.database.ServerValue.TIMESTAMP
                     });
                 } catch (error) {
                     console.error('❌ Move update failed:', error);
