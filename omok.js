@@ -598,6 +598,7 @@ class OmokGame {
 
     handleGameRestart(gameData) {
         console.log('🔄 handleGameRestart 호출됨');
+        console.log('🔄 gameData:', gameData);
         
         // 팝업에서 리셋된 경우 기존 팝업 제거
         if (gameData.resetFromPopup) {
@@ -619,39 +620,53 @@ class OmokGame {
             }
         }
         
-        // 게임 상태 초기화
-        this.board = gameData.board || Array(19).fill().map(() => Array(19).fill(null));
-        this.currentPlayer = gameData.currentPlayer || 'black';
+        // 게임 상태 초기화 (chess/janggi와 동일한 방식)
         this.gameStarted = true;
         this.isGameInProgress = true;
         this.gameEnded = false;
+        this.currentPlayer = gameData.currentPlayer || 'black';
         this.winningLine = null;
         this.lastMove = null;
         this.isMovePending = false;
         
         console.log('🔄 게임 상태 초기화 완료');
         
-        // 즉시 모든 돌 완전 제거 (Firebase 동기화 시)
-        console.log('🧹 Firebase 동기화로 인한 게임 재시작 - 모든 돌 제거');
-        this.clearAllStones();
+        // UI 상태 복구 (chess와 동일한 방식)
+        const gameStatus = document.getElementById('gameStatus');
+        if (gameStatus) {
+            gameStatus.textContent = '게임이 재시작되었습니다!';
+            gameStatus.style.color = '#28a745';
+            gameStatus.style.fontSize = '1.1rem';
+            gameStatus.style.fontWeight = 'bold';
+        }
         
-        // 추가적인 강제 초기화
-        setTimeout(() => {
-            this.clearAllStones();
-            console.log('🧹 추가 초기화 완료');
-        }, 100);
-        
-        // UI 업데이트
+        // 버튼 상태 업데이트
         this.startGameBtnInRoom.style.display = 'none';
         this.resetBtn.style.display = 'block';
         
+        // 타이머 재시작
         this.startTimer();
         
-        this.updateBoard();
+        // 보드 동기화 및 렌더링 (chess/janggi와 동일한 방식)
+        if (gameData.board) {
+            console.log('🔄 보드 동기화 시작');
+            this.syncBoard(gameData.board);
+        } else {
+            console.log('🔄 보드 데이터 없음, 빈 보드로 초기화');
+            this.board = Array(19).fill().map(() => Array(19).fill(null));
+            this.updateBoard();
+        }
+        
+        // 게임 상태 업데이트
         this.updateCurrentPlayer();
         this.updateGameStatus();
         
         console.log('✅ 게임 재시작 완료');
+        
+        // 재시작 알림 (chess/janggi와 동일한 방식)
+        setTimeout(() => {
+            alert('🎮 게임이 재시작되었습니다! 🎮');
+        }, 500);
     }ㅎ
 
     endGame(winner) {
@@ -1206,14 +1221,7 @@ class OmokGame {
             this.winningLine = null;
         }
         
-        // 게임 재시작 시 모든 돌 완전 제거 (더 강력한 감지)
-        const isEmptyBoard = this.board.every(row => row.every(cell => cell === null));
-        const isGameRestart = !this.gameEnded && isEmptyBoard && this.gameStarted;
-        
-        if (isGameRestart) {
-            console.log('🔄 게임 재시작 감지, 모든 돌 완전 제거');
-            this.clearAllStones();
-        }
+        // 게임 재시작은 handleGameRestart에서 처리하므로 여기서는 제거
         
         let stoneCount = 0;
         for (let row = 0; row < 19; row++) {
@@ -1226,23 +1234,11 @@ class OmokGame {
                     continue;
                 }
                 
-                // 강력한 초기화
+                // 기본 초기화 (chess/janggi와 동일한 방식)
                 square.innerHTML = '';
-                square.style.cssText = '';
-                square.style.background = '';
-                square.style.opacity = '';
-                square.style.transform = '';
                 
                 // 기존 클래스 제거
                 square.classList.remove('last-move', 'disabled', 'winning', 'hover');
-                
-                // 기존 돌 요소 강제 제거
-                const existingStones = square.querySelectorAll('.stone');
-                existingStones.forEach(stone => {
-                    stone.style.display = 'none';
-                    stone.style.opacity = '0';
-                    stone.remove();
-                });
                 
                 // 안전한 보드 값 체크
                 if (this.board[row] && this.board[row][col]) {
@@ -1610,7 +1606,7 @@ class OmokGame {
     resetGame() {
         console.log('🔄 resetGame 호출됨');
         
-        // 게임 상태 초기화
+        // 게임 상태 초기화 (chess/janggi와 동일한 방식)
         this.board = Array(19).fill().map(() => Array(19).fill(null));
         this.currentPlayer = 'black';
         this.gameStarted = false;
@@ -1626,17 +1622,7 @@ class OmokGame {
         // 타이머 정지
         this.stopTimer();
         
-        // 모든 돌 완전 제거 (즉시)
-        console.log('🧹 resetGame - 모든 돌 제거');
-        this.clearAllStones();
-        
-        // 추가적인 강제 초기화
-        setTimeout(() => {
-            this.clearAllStones();
-            console.log('🧹 resetGame - 추가 초기화 완료');
-        }, 50);
-        
-        // UI 업데이트
+        // UI 업데이트 (chess/janggi와 동일한 방식)
         this.updateBoard();
         this.updateCurrentPlayer();
         this.updateGameStatus();
