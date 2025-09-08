@@ -613,6 +613,7 @@ class OmokGame {
     }
 
     endGame(winner) {
+        console.log('🎯 endGame 호출됨, winner:', winner);
         this.gameEnded = true;
         this.isGameInProgress = false;
         this.stopTimer();
@@ -620,45 +621,59 @@ class OmokGame {
         console.log('✅ 게임 종료:', winner);
         
         // 승리 팝업 표시
+        console.log('🎯 showWinPopup 호출 시작');
         this.showWinPopup(winner);
+        console.log('🎯 showWinPopup 호출 완료');
     }
     
     showWinPopup(winner) {
+        console.log('🎯 showWinPopup 시작, winner:', winner);
+        console.log('🎯 document.body:', document.body);
+        console.log('🎯 document.readyState:', document.readyState);
+        
         // 기존 팝업이 있으면 제거
         const existingPopup = document.getElementById('winPopup');
         if (existingPopup) {
+            console.log('🎯 기존 팝업 제거');
             existingPopup.remove();
         }
         
         // 팝업 생성
+        console.log('🎯 팝업 요소 생성 시작');
         const popup = document.createElement('div');
         popup.id = 'winPopup';
-        popup.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            animation: fadeIn 0.3s ease;
-        `;
+        
+        // PC 환경을 위한 더 강력한 스타일링
+        popup.style.position = 'fixed';
+        popup.style.top = '0';
+        popup.style.left = '0';
+        popup.style.width = '100%';
+        popup.style.height = '100%';
+        popup.style.background = 'rgba(0, 0, 0, 0.8)';
+        popup.style.display = 'flex';
+        popup.style.justifyContent = 'center';
+        popup.style.alignItems = 'center';
+        popup.style.zIndex = '9999';
+        popup.style.animation = 'fadeIn 0.3s ease';
+        
+        console.log('🎯 팝업 기본 스타일 적용 완료');
         
         const popupContent = document.createElement('div');
-        popupContent.style.cssText = `
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            color: white;
-            max-width: 400px;
-            width: 90%;
-            animation: slideIn 0.3s ease;
-        `;
+        
+        // PC 환경을 위한 개별 스타일 적용
+        popupContent.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        popupContent.style.padding = '40px';
+        popupContent.style.borderRadius = '20px';
+        popupContent.style.textAlign = 'center';
+        popupContent.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3)';
+        popupContent.style.color = 'white';
+        popupContent.style.maxWidth = '400px';
+        popupContent.style.width = '90%';
+        popupContent.style.animation = 'slideIn 0.3s ease';
+        popupContent.style.position = 'relative';
+        popupContent.style.zIndex = '10000';
+        
+        console.log('🎯 팝업 콘텐츠 스타일 적용 완료');
         
         let message = '';
         let emoji = '';
@@ -707,27 +722,56 @@ class OmokGame {
         `;
         
         popup.appendChild(popupContent);
+        
+        console.log('🎯 팝업 DOM에 추가 시작');
+        console.log('🎯 document.body 존재:', !!document.body);
+        
+        // DOM에 추가
         document.body.appendChild(popup);
         
-        // 버튼 이벤트 리스너
-        document.getElementById('playAgainBtn').addEventListener('click', () => {
-            popup.remove();
-            this.resetGameOnline();
-        });
+        console.log('🎯 팝업 DOM에 추가 완료');
+        console.log('🎯 팝업 요소 확인:', document.getElementById('winPopup'));
         
-        document.getElementById('closePopupBtn').addEventListener('click', () => {
-            popup.remove();
-        });
-        
-        // 배경 클릭 시 닫기
-        popup.addEventListener('click', (e) => {
-            if (e.target === popup) {
-                popup.remove();
+        // 약간의 지연 후 이벤트 리스너 추가 (PC 환경 호환성)
+        setTimeout(() => {
+            console.log('🎯 이벤트 리스너 추가 시작');
+            
+            const playAgainBtn = document.getElementById('playAgainBtn');
+            const closePopupBtn = document.getElementById('closePopupBtn');
+            
+            console.log('🎯 playAgainBtn:', playAgainBtn);
+            console.log('🎯 closePopupBtn:', closePopupBtn);
+            
+            if (playAgainBtn) {
+                playAgainBtn.addEventListener('click', () => {
+                    console.log('🎯 다시 하기 버튼 클릭');
+                    popup.remove();
+                    this.resetGameOnline();
+                });
             }
-        });
+            
+            if (closePopupBtn) {
+                closePopupBtn.addEventListener('click', () => {
+                    console.log('🎯 닫기 버튼 클릭');
+                    popup.remove();
+                });
+            }
+            
+            // 배경 클릭 시 닫기
+            popup.addEventListener('click', (e) => {
+                if (e.target === popup) {
+                    console.log('🎯 배경 클릭으로 팝업 닫기');
+                    popup.remove();
+                }
+            });
+            
+            console.log('🎯 이벤트 리스너 추가 완료');
+        }, 100);
         
         // CSS 애니메이션 추가
+        console.log('🎯 CSS 애니메이션 추가 시작');
         const style = document.createElement('style');
+        style.id = 'winPopupStyles';
         style.textContent = `
             @keyframes fadeIn {
                 from { opacity: 0; }
@@ -743,12 +787,58 @@ class OmokGame {
                     transform: translateY(0) scale(1);
                 }
             }
+            #winPopup {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 9999 !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+            }
             #playAgainBtn:hover, #closePopupBtn:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
             }
         `;
+        
+        // 기존 스타일 제거
+        const existingStyle = document.getElementById('winPopupStyles');
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+        
         document.head.appendChild(style);
+        console.log('🎯 CSS 애니메이션 추가 완료');
+        
+        // 팝업이 실제로 표시되었는지 확인
+        setTimeout(() => {
+            const popupElement = document.getElementById('winPopup');
+            if (popupElement) {
+                console.log('🎯 팝업 표시 확인됨:', popupElement);
+                console.log('🎯 팝업 스타일:', window.getComputedStyle(popupElement));
+            } else {
+                console.log('❌ 팝업이 DOM에서 찾을 수 없음');
+                
+                // PC 환경에서 팝업이 안 뜰 경우 백업 alert 사용
+                console.log('🎯 백업 alert 팝업 표시');
+                let alertMessage = '';
+                if (winner === null) {
+                    alertMessage = '무승부입니다!';
+                } else {
+                    const winnerName = winner === 'black' ? 
+                        (this.isRoomHost ? this.hostPlayerName : this.guestPlayerName) :
+                        (this.isRoomGuest ? this.guestPlayerName : this.hostPlayerName);
+                    alertMessage = `${winnerName}님이 승리했습니다!`;
+                }
+                
+                if (confirm(alertMessage + '\n\n다시 하시겠습니까?')) {
+                    this.resetGameOnline();
+                }
+            }
+        }, 200);
     }
 
     async startActualGame() {
@@ -821,14 +911,21 @@ class OmokGame {
         console.log('✅ 로컬 보드 업데이트 완료');
         
         // 승리 체크
+        console.log('🎯 승리 체크 시작, row:', row, 'col:', col);
         const winResult = this.checkWin(row, col);
+        console.log('🎯 승리 체크 결과:', winResult);
+        
         if (winResult.win) {
             console.log('🎉 승리!');
+            console.log('🎯 승리자:', this.currentPlayer);
+            console.log('🎯 승리 라인:', winResult.line);
             this.winningLine = winResult.line;
             const winner = this.currentPlayer;
             
             // 로컬에서 즉시 게임 종료 처리
+            console.log('🎯 endGame 호출 전');
             this.endGame(winner);
+            console.log('🎯 endGame 호출 후');
             
             if (this.isOnlineGame && this.gameRef) {
                 try {

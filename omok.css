@@ -587,6 +587,8 @@ header h1 {
     text-align: center;
     width: clamp(300px, 90vw, 600px); /* 오목보드 크기에 맞춤 */
     max-width: 600px;
+    margin: 0 auto 25px auto;
+
 }
 #gameStatus {
     font-size: 1.1rem;
