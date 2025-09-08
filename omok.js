@@ -597,19 +597,34 @@ class OmokGame {
     }
 
     handleGameRestart(gameData) {
-        this.board = gameData.board;
-        this.currentPlayer = gameData.currentPlayer;
+        console.log('🔄 handleGameRestart 호출됨');
+        console.log('🔄 gameData:', gameData);
+        
+        // 게임 상태 초기화
+        this.board = gameData.board || Array(19).fill().map(() => Array(19).fill(null));
+        this.currentPlayer = gameData.currentPlayer || 'black';
         this.gameStarted = true;
         this.isGameInProgress = true;
         this.gameEnded = false;
         this.winningLine = null;
+        this.lastMove = null;
+        this.isMovePending = false;
+        
+        console.log('🔄 게임 상태 초기화 완료');
+        
+        // UI 업데이트
         this.startGameBtnInRoom.style.display = 'none';
         this.resetBtn.style.display = 'block';
+        
+        // 타이머 시작
         this.startTimer();
+        
+        // 보드 및 상태 업데이트
         this.updateBoard();
         this.updateCurrentPlayer();
         this.updateGameStatus();
-        console.log('✅ 게임 재시작됨');
+        
+        console.log('✅ 게임 재시작 완료');
     }
 
     endGame(winner) {
@@ -746,7 +761,11 @@ class OmokGame {
                 playAgainBtn.addEventListener('click', () => {
                     console.log('🎯 다시 하기 버튼 클릭');
                     popup.remove();
-                    this.resetGameOnline();
+                    
+                    // 약간의 지연 후 게임 재시작 (팝업 제거 후)
+                    setTimeout(() => {
+                        this.resetGameOnline();
+                    }, 100);
                 });
             }
             
@@ -835,7 +854,9 @@ class OmokGame {
                 }
                 
                 if (confirm(alertMessage + '\n\n다시 하시겠습니까?')) {
-                    this.resetGameOnline();
+                    setTimeout(() => {
+                        this.resetGameOnline();
+                    }, 100);
                 }
             }
         }, 200);
@@ -965,8 +986,8 @@ class OmokGame {
                         board: boardForFirebase,
                         gameEnded: true,
                         winner: null,
-                        lastMove: this.lastMove,
-                        lastActivity: firebase.database.ServerValue.TIMESTAMP
+                    lastMove: this.lastMove,
+                    lastActivity: firebase.database.ServerValue.TIMESTAMP
                     });
                 } catch (error) {
                     console.error('❌ Move update failed:', error);
@@ -1294,11 +1315,20 @@ class OmokGame {
     }
 
     async resetGameOnline() {
+        console.log('🔄 resetGameOnline 호출됨');
+        console.log('🔄 isOnlineGame:', this.isOnlineGame);
+        console.log('🔄 gameRef:', this.gameRef);
+        
+        // 먼저 로컬 상태 초기화
+        this.resetGame();
+        
         if (!this.gameRef || !this.isOnlineGame) {
-            this.resetGame();
+            console.log('🔄 오프라인 모드 또는 gameRef 없음, 로컬만 초기화');
             return;
         }
+        
         try {
+            console.log('🔄 Firebase 게임 상태 초기화 시작');
             const newBoard = Array(19).fill().map(() => Array(19).fill(null));
             
             await this.gameRef.update({
@@ -1313,6 +1343,8 @@ class OmokGame {
                 gameRestarted: firebase.database.ServerValue.TIMESTAMP,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
+            
+            console.log('✅ Firebase 게임 상태 초기화 완료');
         } catch (error) {
             console.error('❌ Game restart failed:', error);
             alert('게임 재시작에 실패했습니다: ' + error.message);
@@ -1320,19 +1352,38 @@ class OmokGame {
     }
 
     resetGame() {
+        console.log('🔄 resetGame 호출됨');
+        
+        // 게임 상태 초기화
         this.board = Array(19).fill().map(() => Array(19).fill(null));
         this.currentPlayer = 'black';
         this.gameStarted = false;
         this.gameEnded = false;
+        this.isGameInProgress = false;
         this.lastMove = null;
         this.winningLine = null;
         this.hoveredCell = null;
+        this.isMovePending = false;
+        
+        console.log('🔄 게임 상태 초기화 완료');
+        
+        // 타이머 정지
         this.stopTimer();
+        
+        // UI 업데이트
         this.updateBoard();
         this.updateCurrentPlayer();
         this.updateGameStatus();
-        this.startGameBtnInRoom.style.display = 'block';
-        this.resetBtn.style.display = 'none';
+        
+        // 버튼 상태 업데이트
+        if (this.startGameBtnInRoom) {
+            this.startGameBtnInRoom.style.display = 'block';
+        }
+        if (this.resetBtn) {
+            this.resetBtn.style.display = 'none';
+        }
+        
+        console.log('✅ resetGame 완료');
     }
 
     backToMenu() {
