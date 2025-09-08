@@ -35,7 +35,6 @@
         
         <div class="game-menu" id="gameMenu">
             <div class="menu-content">
-                <h2>Made by 고성 상리초 T.Min</h2>
                 <h2>체스 게임에 오신 것을 환영합니다!</h2>
                 
                 <div class="create-room-section">
@@ -66,10 +65,6 @@
                 <div class="player-turn">
                     <span id="currentPlayer">백의 차례</span>
                 </div>
-                <div class="timer-container">
-                    <div class="timer-label">남은 시간:</div>
-                    <div id="turnTimer" class="timer">40</div>
-                </div>
                 <div class="game-code-container" id="gameCodeContainer" style="display: none;">
                     <div class="game-code-label">게임 코드:</div>
                     <div class="game-code-display">
@@ -85,11 +80,16 @@
             </div>
             
             <div class="chess-area">
-                <div class="player-container black-player" id="blackPlayerContainer" style="display: none;">
-                    <div class="player-avatar">♛</div>
-                    <div class="player-info-side">
-                        <div class="player-name-side" id="blackPlayerName">-</div>
-                        <div class="player-role">흑말</div>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="timer-container" style="text-align: center; margin-bottom: 5px;">
+                        <div id="turnTimer" class="timer">40</div>
+                    </div>
+                    <div class="player-container black-player" id="blackPlayerContainer" style="display: none;">
+                        <div class="player-avatar">♛</div>
+                        <div class="player-info-side">
+                            <div class="player-name-side" id="blackPlayerName">-</div>
+                            <div class="player-role">흑말</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -120,6 +120,11 @@
                 </div>
             </div>
         </div>
+    </div>
+    
+    <!-- 제작자 정보 -->
+    <div style="position: fixed; bottom: 24px; right: 24px; color: #ccc; font-size: 14px; font-weight: 500; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); z-index: 1000;">
+        제작 T Min
     </div>
     
     <script src="chess.js"></script>

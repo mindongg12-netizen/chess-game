@@ -14,7 +14,7 @@ body {
     position: relative;
 }
 
-/* 다크모드 토글 버튼 스타일 */
+/* ?�크모드 ?��? 버튼 ?��???*/
 .theme-toggle-container {
     position: fixed;
     top: 20px;
@@ -60,6 +60,7 @@ body {
 .container {
     max-width: 1200px;
     width: 100%;
+    margin: 0 auto; /* �߾� ���� */
     padding: 20px;
 }
 
@@ -75,7 +76,7 @@ header h1 {
     margin-bottom: 10px;
 }
 
-/* 게임 메뉴 스타일 */
+/* 게임 메뉴 ?��???*/
 .game-menu {
     display: flex;
     justify-content: center;
@@ -115,7 +116,7 @@ header h1 {
     box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
 }
 
-/* 방 만들기 섹션 스타일 */
+/* �?만들�??�션 ?��???*/
 .create-room-section {
     margin-bottom: 20px;
 }
@@ -127,7 +128,7 @@ header h1 {
     text-align: center;
 }
 
-/* 이름 입력 컨테이너 */
+/* ?�름 ?�력 컨테?�너 */
 .name-input-container {
     display: flex;
     gap: 10px;
@@ -160,7 +161,7 @@ header h1 {
     color: #adb5bd;
 }
 
-/* 방 참가 섹션 스타일 */
+/* �?참�? ?�션 ?��???*/
 .divider {
     margin: 25px 0;
     font-size: 1rem;
@@ -263,7 +264,7 @@ header h1 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 게임 컨테이너 */
+/* 게임 컨테?�너 */
 .game-container {
     display: flex;
     flex-direction: column;
@@ -282,8 +283,9 @@ header h1 {
     padding: 15px 30px;
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 968px; /* 체스보드(608px) + 플레이어 컨테이너들(180px*2) */
+    width: 608px; /* 체스보드 ?�기??맞춤 */
+    max-width: 608px;
+    margin: 0 auto 25px auto; /* 중앙 정렬 + 하단 25px 마진 */
 }
 
 .player-turn {
@@ -292,7 +294,7 @@ header h1 {
     color: #333;
 }
 
-/* 타이머 스타일 */
+/* ?�?�머 ?��???*/
 .timer-container {
     display: flex;
     flex-direction: column;
@@ -333,7 +335,7 @@ header h1 {
     100% { transform: scale(1); }
 }
 
-/* 게임 코드 스타일 */
+/* 게임 코드 ?��???*/
 .game-code-container {
     display: flex;
     flex-direction: column;
@@ -388,7 +390,7 @@ header h1 {
     transform: translateY(0);
 }
 
-/* 게임 컨트롤 스타일 */
+/* 게임 컨트�??��???*/
 .game-controls {
     display: flex;
     gap: 15px;
@@ -447,19 +449,20 @@ header h1 {
     box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
 }
 
-/* 체스 영역 스타일 */
+/* 체스 ?�역 ?��???*/
 .chess-area {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 30px;
     justify-content: center;
     flex-wrap: nowrap;
     position: relative;
     width: 100%;
-    max-width: 968px; /* 모든 컨테이너와 동일한 너비 */
+    margin: 0 auto 25px auto; /* 중앙 정렬 + 하단 25px 마진 */
+    max-width: 968px; /* 모든 컨테?�너?�??�일???�비 */
 }
 
-/* 플레이어 컨테이너 스타일 */
+/* ?�레?�어 컨테?�너 ?��???*/
 .player-container {
     display: flex;
     flex-direction: column;
@@ -521,7 +524,7 @@ header h1 {
     font-weight: normal;
 }
 
-/* 체스보드 스타일 */
+/* 체스보드 ?��???*/
 .chessboard {
     display: grid;
     grid-template-columns: repeat(8, 75px);
@@ -532,7 +535,8 @@ header h1 {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     background: #8B4513;
     width: 608px; /* 75px * 8 + 4px border * 2 = 608px */
-    max-width: 640px;
+    max-width: 608px;
+    margin: 0 auto; /* �߾� ���� */
     order: 2;
 }
 
@@ -572,12 +576,12 @@ header h1 {
     opacity: 0.8;
 }
 
-/* 체스 기물 스타일 */
+/* 체스 기물 ?��???*/
 .piece {
     font-size: 3rem;
     user-select: none;
     transition: transform 0.2s ease;
-    color: #000000; /* 라이트모드에서 체스말을 검은색으로 명시 */
+    color: #000000; /* ?�이?�모?�에??체스말을 검?�?�으�?명시 */
     text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
 
@@ -586,15 +590,17 @@ header h1 {
     text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.9);
 }
 
-/* 게임 상태 */
+/* 게임 ?�태 */
 .game-status {
     background: rgba(255, 255, 255, 0.9);
     padding: 15px;
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     text-align: center;
-    width: 100%;
-    max-width: 968px; /* 체스보드(608px) + 플레이어 컨테이너들(180px*2) */
+    width: 608px; /* 체스보드 ?�기??맞춤 */
+    max-width: 608px;
+    margin: 0 auto; /* 중앙 ?�렬 */
+
 }
 
 #gameStatus {
@@ -627,11 +633,11 @@ header h1 {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-    color: #000000; /* 라이트모드에서 잡힌 말들도 검은색으로 명시 */
+    color: #000000; /* ?�이?�모?�에???�힌 말들??검?�?�으�?명시 */
     text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
 
-/* 반응형 디자인 */
+/* 반응???�자??*/
 @media (max-width: 768px) {
     header h1 {
         font-size: 2rem;
@@ -650,7 +656,7 @@ header h1 {
     
     .piece {
         font-size: 2rem;
-        color: #000000; /* 모바일에서도 체스말을 검은색으로 명시 */
+        color: #000000; /* 모바?�에?�도 체스말을 검?�?�으�?명시 */
         text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
     }
     
@@ -717,8 +723,9 @@ header h1 {
     
     .chess-area {
         flex-direction: column;
-        gap: 15px;
+        gap: 20px;
         max-width: 100%;
+        margin: 0 auto 20px auto; /* 모바일에서 하단 20px 마진 */
     }
     
     .player-container {
@@ -727,20 +734,26 @@ header h1 {
     }
     
     .player-container.black-player {
-        order: 1; /* 체스판 위에 배치 */
+        order: 1; /* 체스???�에 배치 */
     }
     
     .chessboard {
-        order: 2; /* 가운데 */
+        margin: 0 auto; /* �߾� ���� */
+    order: 2; /* 가?�데 */
     }
     
     .player-container.white-player {
-        order: 3; /* 체스판 아래에 배치 */
+        order: 3; /* 체스???�래??배치 */
     }
     
     .game-info, .game-status {
         max-width: 100%;
         width: 100%;
+        margin: 0 auto; /* 중앙 정렬 */
+    }
+    
+    .game-info {
+        margin: 0 auto 20px auto; /* 모바일에서 하단 20px 마진 */
     }
     
     .player-avatar {
@@ -766,7 +779,7 @@ header h1 {
         flex-direction: column;
     }
     
-    /* 모바일에서 게임 선택 버튼 크기 조정 */
+    /* 모바?�에??게임 ?�택 버튼 ?�기 조정 */
     .game-select-btn {
         padding: 8px 12px;
         font-size: 12px;
@@ -778,7 +791,7 @@ header h1 {
     }
 }
 
-/* 게임 선택 버튼 */
+/* 게임 ?�택 버튼 */
 .game-select-container {
     position: fixed;
     top: 20px;

@@ -195,8 +195,11 @@ header h1 {
     padding: 15px 30px;
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 968px;
+    width: 542px; /* 장기보드 크기에 맞춤 */
+    max-width: 542px;
+    margin: 0 auto; /* 중앙 ?�렬 */
+
+
 }
 
 .player-turn, .timer, .game-code, .game-controls {
@@ -407,8 +410,10 @@ header h1 {
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     text-align: center;
-    width: 100%;
-    max-width: 968px;
+    width: 542px; /* 장기보드 크기에 맞춤 */
+    max-width: 542px;
+    margin: 0 auto; /* 중앙 ?�렬 */
+
 }
 #gameStatus {
     font-size: 1.1rem;

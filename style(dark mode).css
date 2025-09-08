@@ -1,8 +1,8 @@
-/* GyeonggiCheonnyeonBatang체 적용 */
+/* GyeonggiCheonnyeonBatang�??�용 */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-/* --- CSS 변수 정의 ---
-  디자인의 일관성을 유지하고 손쉬운 수정을 위해 주요 값들을 변수로 관리합니다.
+/* --- CSS 변???�의 ---
+  ?�자?�의 ?��??�을 ?��??�고 ?�쉬???�정???�해 주요 값들??변?�로 관리합?�다.
 */
 :root {
     --font-primary: 'Poppins', sans-serif;
@@ -18,11 +18,11 @@
     --color-text-secondary: #a0a0c0;
     --color-text-dark: #333;
 
-    --color-accent-primary: #f9a826; /* 주요 버튼 (방 만들기 등) */
+    --color-accent-primary: #f9a826; /* 주요 버튼 (�?만들�??? */
     --color-accent-primary-dark: #f57f17;
-    --color-accent-secondary: #26a69a; /* 보조 버튼 (참가하기 등) */
+    --color-accent-secondary: #26a69a; /* 보조 버튼 (참�??�기 ?? */
     --color-accent-secondary-dark: #00897b;
-    --color-accent-danger: #e53935; /* 경고, 위험 */
+    --color-accent-danger: #e53935; /* 경고, ?�험 */
     
     --board-light: #EADDC5;
     --board-dark: #A47B5E;
@@ -36,7 +36,7 @@
     --shadow-medium: 0 8px 30px rgba(0,0,0,0.2);
 }
 
-/* --- 기본 스타일 & 배경 --- */
+/* --- 기본 ?��???& 배경 --- */
 * {
     margin: 0;
     padding: 0;
@@ -54,7 +54,7 @@ body {
     position: relative;
 }
 
-/* 다크모드 토글 버튼 스타일 */
+/* ?�크모드 ?��? 버튼 ?��???*/
 .theme-toggle-container {
     position: fixed;
     top: 20px;
@@ -113,7 +113,7 @@ header h1 {
     letter-spacing: 2px;
 }
 
-/* --- 게임 메뉴 (글래스모피즘 적용) --- */
+/* --- 게임 메뉴 (글?�스모피�??�용) --- */
 .game-menu {
     display: flex;
     justify-content: center;
@@ -149,7 +149,7 @@ header h1 {
     font-weight: 500;
 }
 
-/* --- 입력 필드 & 버튼 공통 스타일 --- */
+/* --- ?�력 ?�드 & 버튼 공통 ?��???--- */
 .name-input, .room-code-input {
     padding: 12px 20px;
     font-size: 1rem;
@@ -180,7 +180,7 @@ header h1 {
     margin-bottom: 15px;
 }
 
-/* 버튼 기본 스타일 */
+/* 버튼 기본 ?��???*/
 .start-btn, .join-btn, .start-game-btn, .reset-btn, .menu-btn {
     color: white;
     border: none;
@@ -203,7 +203,7 @@ header h1 {
     transform: translateY(0);
 }
 
-/* 버튼 색상 */
+/* 버튼 ?�상 */
 #startGameBtn, #startGameBtnInRoom {
     background: linear-gradient(45deg, var(--color-accent-primary), var(--color-accent-primary-dark));
 }
@@ -229,7 +229,7 @@ header h1 {
     background-image: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.5), rgba(255,255,255,0));
 }
 
-/* --- 게임 컨테이너 --- */
+/* --- 게임 컨테?�너 --- */
 .game-container {
     display: flex;
     flex-direction: column;
@@ -237,18 +237,24 @@ header h1 {
     gap: 20px;
     max-width: 1000px;
     margin: 0 auto;
-    display: none; /* JS로 제어 */
+    display: none; /* JS�??�어 */
 }
 
 .game-info, .game-status {
-    width: 100%;
-    max-width: 968px;
+    width: 610px; /* 체스보드 ?�기??맞춤 */
+    max-width: 610px;
     background: var(--color-surface-bg);
     padding: 15px 30px;
     border-radius: 15px;
     box-shadow: var(--shadow-medium);
     border: 1px solid var(--color-surface-border);
     backdrop-filter: blur(5px);
+    margin: 0 auto; /* 중앙 ?�렬 */
+
+}
+
+.game-info {
+    margin: 0 auto 25px auto; /* 중앙 정렬 + 하단 25px 마진 */
 }
 
 .game-info {
@@ -262,7 +268,7 @@ header h1 {
     font-weight: 600;
 }
 
-/* 타이머 */
+/* ?�?�머 */
 .timer-container {
     text-align: center;
 }
@@ -319,7 +325,7 @@ header h1 {
 }
 .copy-btn:hover { background: var(--color-accent-secondary-dark); }
 
-/* 게임 컨트롤 */
+/* 게임 컨트�?*/
 .game-controls { display: flex; gap: 10px; }
 .reset-btn, .menu-btn {
     background: rgba(255,255,255,0.15);
@@ -331,17 +337,18 @@ header h1 {
     background: rgba(255,255,255,0.25);
 }
 
-/* --- 체스 영역 --- */
+/* --- 체스 ?�역 --- */
 .chess-area {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 30px;
     justify-content: center;
     width: 100%;
     max-width: 968px;
+    margin: 0 auto 25px auto; /* 중앙 정렬 + 하단 25px 마진 */
 }
 
-/* 플레이어 컨테이너 */
+/* ?�레?�어 컨테?�너 */
 .player-container {
     display: flex;
     flex-direction: column;
@@ -355,7 +362,7 @@ header h1 {
     min-width: 120px;
     transition: all 0.3s ease;
 }
-.player-container.active { /* 현재 턴인 플레이어 강조 */
+.player-container.active { /* ?�재 ?�인 ?�레?�어 강조 */
     border-color: var(--color-accent-primary);
     box-shadow: 0 0 20px rgba(249, 168, 38, 0.5);
 }
@@ -386,6 +393,7 @@ header h1 {
     overflow: hidden;
     box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     width: 610px; /* 75 * 8 + 5 * 2 */
+    margin: 0 auto; /* �߾� ���� */
 }
 .square {
     width: 75px;
@@ -400,7 +408,7 @@ header h1 {
 .square.white { background-color: var(--board-light); }
 .square.black { background-color: var(--board-dark); }
 
-/* --- 하이라이트 효과 (글로우) --- */
+/* --- ?�이?�이???�과 (글로우) --- */
 .square.selected::after, .square.valid-move::after, .square.capture::after {
     content: '';
     position: absolute;
@@ -439,7 +447,7 @@ header h1 {
     user-select: none;
     text-shadow: 0 3px 8px rgba(0,0,0,0.4);
     transition: transform 0.2s ease;
-    color: #000000; /* 다크모드에서 체스말을 검은색으로 */
+    color: #000000; /* ?�크모드?�서 체스말을 검?�?�으�?*/
     text-shadow: 
         0 0 1px rgba(255,255,255,0.3),
         0 2px 4px rgba(0,0,0,0.8);
@@ -451,7 +459,7 @@ header h1 {
         0 3px 6px rgba(0,0,0,0.9);
 }
 
-/* --- 게임 상태 & 잡힌 말 --- */
+/* --- 게임 ?�태 & ?�힌 �?--- */
 .game-status { text-align: center; }
 #gameStatus {
     font-size: 1.2rem;
@@ -475,15 +483,19 @@ header h1 {
     flex-wrap: wrap;
     gap: 8px;
     justify-content: center;
-    color: #000000; /* 다크모드에서 잡힌 말들도 검은색으로 */
+    color: #000000; /* ?�크모드?�서 ?�힌 말들??검?�?�으�?*/
     text-shadow: 
         0 0 1px rgba(255,255,255,0.3),
         0 1px 3px rgba(0,0,0,0.8);
 }
 
-/* --- 반응형 디자인 --- */
+/* --- 반응???�자??--- */
 @media (max-width: 1024px) {
-    .chess-area { flex-direction: column; gap: 15px; }
+    .chess-area { 
+        flex-direction: column; 
+        gap: 20px; 
+        margin: 0 auto 20px auto; /* 모바일에서 하단 20px 마진 */
+    }
     .player-container.black-player { order: 1; }
     .chessboard { order: 2; }
     .player-container.white-player { order: 3; }
@@ -502,19 +514,23 @@ header h1 {
     .square { width: 11vw; height: 11vw; }
     .piece { 
         font-size: 7vw; 
-        color: #000000; /* 모바일에서도 체스말을 검은색으로 */
+        color: #000000; /* 모바?�에?�도 체스말을 검?�?�으�?*/
         text-shadow: 
             0 0 1px rgba(255,255,255,0.3),
             0 1px 2px rgba(0,0,0,0.8);
     }
 
     .game-info, .game-status, .chess-area { max-width: 100%; }
-    .game-info { flex-direction: column; text-align: center; }
+    .game-info { 
+        flex-direction: column; 
+        text-align: center; 
+        margin: 0 auto 20px auto; /* 모바일에서 하단 20px 마진 */
+    }
     #capturedPieces { flex-direction: column; }
     .menu-content { padding: 30px; }
     .name-input-container, .code-input-container { flex-direction: column; }
     
-    /* 모바일에서 게임 선택 버튼 크기 조정 - 다크 모드 */
+    /* 모바?�에??게임 ?�택 버튼 ?�기 조정 - ?�크 모드 */
     .game-select-btn {
         padding: 8px 12px;
         font-size: 12px;
@@ -526,7 +542,7 @@ header h1 {
     }
 }
 
-/* 게임 선택 버튼 - 다크 모드 */
+/* 게임 ?�택 버튼 - ?�크 모드 */
 .game-select-container {
     position: fixed;
     top: 20px;
