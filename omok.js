@@ -599,6 +599,17 @@ class OmokGame {
     handleGameRestart(gameData) {
         console.log('🔄 handleGameRestart 호출됨');
         console.log('🔄 gameData:', gameData);
+        console.log('🔄 resetFromPopup:', gameData.resetFromPopup);
+        
+        // 팝업에서 리셋된 경우 기존 팝업 제거
+        if (gameData.resetFromPopup) {
+            console.log('🔄 팝업에서 리셋됨, 기존 팝업 제거');
+            const existingPopup = document.getElementById('winPopup');
+            if (existingPopup) {
+                existingPopup.remove();
+                console.log('✅ 기존 팝업 제거 완료');
+            }
+        }
         
         // 게임 상태 초기화
         this.board = gameData.board || Array(19).fill().map(() => Array(19).fill(null));
@@ -790,7 +801,7 @@ class OmokGame {
                     
                     // 약간의 지연 후 게임 재시작 (팝업 제거 후)
                     setTimeout(() => {
-                        this.resetGameOnline();
+                        this.resetGameFromPopup();
                     }, 100);
                 });
             }
@@ -907,7 +918,7 @@ class OmokGame {
                 
                 if (confirm(alertMessage + '\n\n다시 하시겠습니까?')) {
                     setTimeout(() => {
-                        this.resetGameOnline();
+                        this.resetGameFromPopup();
                     }, 100);
                 }
             }
@@ -1364,6 +1375,43 @@ class OmokGame {
         }
         
         this.startTimer();
+    }
+
+    async resetGameFromPopup() {
+        console.log('🔄 resetGameFromPopup 호출됨 (팝업에서 다시 하기)');
+        console.log('🔄 isOnlineGame:', this.isOnlineGame);
+        console.log('🔄 gameRef:', this.gameRef);
+        
+        if (!this.gameRef || !this.isOnlineGame) {
+            console.log('🔄 오프라인 모드, 로컬만 초기화');
+            this.resetGame();
+            return;
+        }
+        
+        try {
+            console.log('🔄 Firebase를 통한 양쪽 플레이어 게임 재시작 시작');
+            const newBoard = Array(19).fill().map(() => Array(19).fill(null));
+            
+            // Firebase에 게임 재시작 신호 전송 (양쪽 플레이어 모두 동기화)
+            await this.gameRef.update({
+                board: newBoard,
+                currentPlayer: 'black',
+                gameStarted: true,
+                isGameInProgress: true,
+                gameEnded: false,
+                winner: null,
+                lastMove: null,
+                winningLine: null,
+                gameRestarted: firebase.database.ServerValue.TIMESTAMP,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP,
+                resetFromPopup: true  // 팝업에서 리셋했음을 표시
+            });
+            
+            console.log('✅ Firebase를 통한 양쪽 플레이어 게임 재시작 완료');
+        } catch (error) {
+            console.error('❌ Game restart from popup failed:', error);
+            alert('게임 재시작에 실패했습니다: ' + error.message);
+        }
     }
 
     async resetGameOnline() {
