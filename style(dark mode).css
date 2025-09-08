@@ -294,11 +294,18 @@ header h1 {
 
 /* 게임 코드 */
 .game-code-container {
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
 }
 .game-code-label {
     font-size: 0.9rem;
     color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    height: 40px; /* game-code-display와 동일한 높이 */
 }
 .game-code-display {
     display: flex;
@@ -306,6 +313,8 @@ header h1 {
     gap: 10px;
     background: rgba(0,0,0,0.2);
     padding: 8px 15px;
+    height: 40px; /* 명시적 높이 설정 */
+    box-sizing: border-box;
     border-radius: 10px;
 }
 .game-code {
@@ -326,12 +335,23 @@ header h1 {
 .copy-btn:hover { background: var(--color-accent-secondary-dark); }
 
 /* 게임 컨트�?*/
-.game-controls { display: flex; gap: 10px; }
+.game-controls { display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; }
+
+/* game-controls 내부의 모든 버튼들을 동일한 크기로 설정 */
+.game-controls .start-game-btn {
+    padding: 10px 20px !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    border-radius: 20px !important;
+    min-width: 120px !important;
+}
+
 .reset-btn, .menu-btn {
     background: rgba(255,255,255,0.15);
     padding: 10px 20px;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 500;
+    min-width: 120px; /* 버튼 최소 너비 설정 */
 }
 .reset-btn:hover, .menu-btn:hover {
     background: rgba(255,255,255,0.25);

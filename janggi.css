@@ -197,9 +197,7 @@ header h1 {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     width: 542px; /* 장기보드 크기에 맞춤 */
     max-width: 542px;
-    margin: 0 auto; /* 중앙 ?�렬 */
-
-
+    margin: 0 auto 25px auto; /* 중앙 정렬 + 하단 25px 마진 */
 }
 
 .player-turn, .timer, .game-code, .game-controls {
@@ -256,7 +254,7 @@ header h1 {
     cursor: pointer;
 }
 
-.game-controls { display: flex; gap: 15px; justify-content: center; }
+.game-controls { display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; }
 .start-game-btn, .reset-btn, .menu-btn {
     color: white;
     border: none;
@@ -264,6 +262,7 @@ header h1 {
     border-radius: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
+    min-width: 120px; /* 버튼 최소 너비 설정 */
 }
 .start-game-btn { background: linear-gradient(45deg, #ff6b6b, #ff8e8e); }
 .reset-btn, .menu-btn { background: linear-gradient(45deg, #4ecdc4, #44a08d); }
@@ -275,6 +274,7 @@ header h1 {
     align-items: center;
     gap: 20px;
     justify-content: center;
+    margin-bottom: 25px; /* janggi-area와 game-status 사이 갭 */
 }
 
 /* Player Info Containers (styled like chess) */
