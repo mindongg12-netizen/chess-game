@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online Omok</title>
-    
-    <!-- 외부 CSS 파일 연결 -->
+    <title>Online 오목</title>
     <link rel="stylesheet" href="omok.css" id="lightTheme">
     <link rel="stylesheet" href="omok(dark).css" id="darkTheme" disabled>
     
-    <!-- Firebase 라이브러리 -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
 </head>
 <body>
+    <!-- 게임 선택 버튼 -->
     <div class="game-select-container">
         <button id="gameSelectBtn" class="game-select-btn" title="게임 선택" onclick="window.location.href='index.html'">
             <span class="game-select-icon">🎮</span>
@@ -22,6 +21,7 @@
         </button>
     </div>
 
+    <!-- 다크모드 토글 버튼 -->
     <div class="theme-toggle-container">
         <button id="themeToggle" class="theme-toggle-btn" title="다크모드 전환">
             <span class="theme-icon">🌙</span>
@@ -35,13 +35,13 @@
         
         <div class="game-menu" id="gameMenu">
             <div class="menu-content">
-                <h2>온라인 오목 게임에 오신 것을 환영합니다!</h2>
+                <h2>오목 게임에 오신 것을 환영합니다!</h2>
                 
                 <div class="create-room-section">
                     <h3>방 만들기</h3>
                     <div class="name-input-container">
                         <input type="text" id="hostNameInput" class="name-input" placeholder="이름" maxlength="10">
-                        <button id="createRoomBtn" class="start-btn">방 만들기</button>
+                        <button id="startGameBtn" class="start-btn">방 만들기</button>
                     </div>
                 </div>
                 
@@ -63,7 +63,7 @@
         <div class="game-container" id="gameContainer" style="display: none;">
             <div class="game-info">
                 <div class="player-turn">
-                    <span id="currentPlayer">흑(黑)의 차례</span>
+                    <span id="currentPlayer">대기중</span>
                 </div>
                 <div class="game-code-container" id="gameCodeContainer" style="display: none;">
                     <div class="game-code-label">게임 코드:</div>
@@ -84,22 +84,41 @@
                     <div class="timer-container" style="text-align: center; margin-bottom: 5px;">
                         <div id="turnTimer" class="timer">40</div>
                     </div>
+                    <div class="player-container black-player" id="blackPlayerContainer" style="display: none;">
+                        <div class="player-avatar">黑</div>
+                        <div class="player-info-side">
+                            <div class="player-name-side" id="blackPlayerName">-</div>
+                            <div class="player-role">흑(黑)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="omokboard" id="omokboard">
+                    <div class="grid-overlay" id="gridOverlay"></div>
+                    <div class="star-points" id="starPoints">
+                        <!-- HTML로 직접 별점 생성 -->
+                        <div class="star-point" style="top: 16.67%; left: 16.67%;"></div>
+                        <div class="star-point" style="top: 16.67%; left: 50%;"></div>
+                        <div class="star-point" style="top: 16.67%; left: 83.33%;"></div>
+                        <div class="star-point" style="top: 50%; left: 16.67%;"></div>
+                        <div class="star-point" style="top: 50%; left: 50%;"></div>
+                        <div class="star-point" style="top: 50%; left: 83.33%;"></div>
+                        <div class="star-point" style="top: 83.33%; left: 16.67%;"></div>
+                        <div class="star-point" style="top: 83.33%; left: 50%;"></div>
+                        <div class="star-point" style="top: 83.33%; left: 83.33%;"></div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="timer-container" style="text-align: center; margin-bottom: 5px;">
+                        <div id="turnTimer2" class="timer">40</div>
+                    </div>
                     <div class="player-container white-player" id="whitePlayerContainer" style="display: none;">
                         <div class="player-avatar">白</div>
                         <div class="player-info-side">
                             <div class="player-name-side" id="whitePlayerName">-</div>
                             <div class="player-role">백(白)</div>
                         </div>
-                    </div>
-                </div>
-                
-                <div class="omokboard" id="omokboard"></div>
-                
-                <div class="player-container black-player" id="blackPlayerContainer" style="display: none;">
-                    <div class="player-avatar">黑</div>
-                    <div class="player-info-side">
-                        <div class="player-name-side" id="blackPlayerName">-</div>
-                        <div class="player-role">흑(黑)</div>
                     </div>
                 </div>
             </div>
