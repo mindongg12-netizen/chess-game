@@ -323,6 +323,8 @@ class OmokGame {
             this.isRoomGuest = false;
             this.isOnlineGame = true;
             
+            const initialBoard = Array(19).fill().map(() => Array(19).fill(null));
+            
             const roomData = {
                 hostId: this.playerId,
                 hostName: hostName,
@@ -330,7 +332,7 @@ class OmokGame {
                 guestName: null,
                 gameStarted: false,
                 currentPlayer: 'black',
-                board: this.board,
+                board: initialBoard,
                 lastMove: null,
                 gameEnded: false,
                 winningLine: null,
@@ -475,14 +477,65 @@ class OmokGame {
 
     syncBoard(remoteBoard) {
         console.log('🔄 syncBoard 호출');
+        console.log('원격 보드 타입:', typeof remoteBoard);
         console.log('원격 보드:', remoteBoard);
         
-        // 안전한 보드 동기화
-        if (remoteBoard && Array.isArray(remoteBoard) && remoteBoard.length === 19) {
-            this.board = remoteBoard;
-            console.log('✅ 보드 동기화 완료');
+        // 원격 보드가 null이거나 undefined인 경우
+        if (!remoteBoard) {
+            console.log('⚠️ 원격 보드가 null/undefined, 현재 보드 유지');
+            this.updateBoard();
+            return;
+        }
+        
+        // 원격 보드가 배열인 경우
+        if (Array.isArray(remoteBoard)) {
+            if (remoteBoard.length === 19) {
+                // 각 행이 배열인지 확인
+                let isValid = true;
+                for (let i = 0; i < 19; i++) {
+                    if (!Array.isArray(remoteBoard[i]) || remoteBoard[i].length !== 19) {
+                        isValid = false;
+                        break;
+                    }
+                }
+                
+                if (isValid) {
+                    this.board = remoteBoard;
+                    console.log('✅ 보드 동기화 완료 (배열)');
+                } else {
+                    console.log('❌ 원격 보드 배열 구조가 잘못됨, 현재 보드 유지');
+                }
+            } else {
+                console.log('❌ 원격 보드 배열 길이가 19가 아님:', remoteBoard.length);
+            }
+        } 
+        // 원격 보드가 객체인 경우 (Firebase에서 객체로 저장된 경우)
+        else if (typeof remoteBoard === 'object') {
+            console.log('🔄 객체 형태의 보드 데이터 처리');
+            try {
+                // 객체를 2차원 배열로 변환
+                const newBoard = Array(19).fill().map(() => Array(19).fill(null));
+                
+                for (let row = 0; row < 19; row++) {
+                    const rowKey = row.toString();
+                    if (remoteBoard[rowKey] && typeof remoteBoard[rowKey] === 'object') {
+                        for (let col = 0; col < 19; col++) {
+                            const colKey = col.toString();
+                            if (remoteBoard[rowKey][colKey] !== undefined) {
+                                newBoard[row][col] = remoteBoard[rowKey][colKey];
+                            }
+                        }
+                    }
+                }
+                
+                this.board = newBoard;
+                console.log('✅ 보드 동기화 완료 (객체 → 배열 변환)');
+            } catch (error) {
+                console.error('❌ 객체 보드 변환 실패:', error);
+                console.log('현재 보드 유지');
+            }
         } else {
-            console.log('❌ 원격 보드가 유효하지 않음, 현재 보드 유지');
+            console.log('❌ 원격 보드가 배열도 객체도 아님:', typeof remoteBoard);
         }
         
         this.updateBoard();
@@ -610,8 +663,12 @@ class OmokGame {
             
             if (this.isOnlineGame && this.gameRef) {
                 try {
+                    const boardForFirebase = this.board.map(row => 
+                        row.map(cell => cell === null ? null : cell)
+                    );
+                    
                     await this.gameRef.update({
-                        board: this.board,
+                        board: boardForFirebase,
                         gameEnded: true,
                         winner: this.currentPlayer,
                         lastMove: this.lastMove,
@@ -635,8 +692,12 @@ class OmokGame {
             
             if (this.isOnlineGame && this.gameRef) {
                 try {
+                    const boardForFirebase = this.board.map(row => 
+                        row.map(cell => cell === null ? null : cell)
+                    );
+                    
                     await this.gameRef.update({
-                        board: this.board,
+                        board: boardForFirebase,
                         gameEnded: true,
                         winner: null,
                         lastMove: this.lastMove,
@@ -657,8 +718,13 @@ class OmokGame {
         
         if (this.isOnlineGame && this.gameRef) {
             try {
+                // 보드를 Firebase에 저장할 때 일관된 형태로 변환
+                const boardForFirebase = this.board.map(row => 
+                    row.map(cell => cell === null ? null : cell)
+                );
+                
                 await this.gameRef.update({
-                    board: this.board,
+                    board: boardForFirebase,
                     currentPlayer: this.currentPlayer,
                     lastMove: this.lastMove,
                     lastActivity: firebase.database.ServerValue.TIMESTAMP
@@ -959,8 +1025,10 @@ class OmokGame {
             return;
         }
         try {
+            const newBoard = Array(19).fill().map(() => Array(19).fill(null));
+            
             await this.gameRef.update({
-                board: Array(19).fill().map(() => Array(19).fill(null)),
+                board: newBoard,
                 currentPlayer: 'black',
                 gameStarted: true,
                 isGameInProgress: true,
