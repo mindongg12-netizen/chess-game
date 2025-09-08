@@ -621,7 +621,15 @@ class OmokGame {
         
         console.log('🔄 게임 상태 초기화 완료');
         
+        // 즉시 모든 돌 완전 제거 (Firebase 동기화 시)
+        console.log('🧹 Firebase 동기화로 인한 게임 재시작 - 모든 돌 제거');
         this.clearAllStones();
+        
+        // 추가적인 강제 초기화
+        setTimeout(() => {
+            this.clearAllStones();
+            console.log('🧹 추가 초기화 완료');
+        }, 100);
         
         // UI 업데이트
         this.startGameBtnInRoom.style.display = 'none';
@@ -1185,8 +1193,11 @@ class OmokGame {
             this.winningLine = null;
         }
         
-        // 게임 재시작 시 모든 돌 완전 제거
-        if (!this.gameEnded && this.board.every(row => row.every(cell => cell === null))) {
+        // 게임 재시작 시 모든 돌 완전 제거 (더 강력한 감지)
+        const isEmptyBoard = this.board.every(row => row.every(cell => cell === null));
+        const isGameRestart = !this.gameEnded && isEmptyBoard && this.gameStarted;
+        
+        if (isGameRestart) {
             console.log('🔄 게임 재시작 감지, 모든 돌 완전 제거');
             this.clearAllStones();
         }
@@ -1202,10 +1213,23 @@ class OmokGame {
                     continue;
                 }
                 
+                // 강력한 초기화
                 square.innerHTML = '';
+                square.style.cssText = '';
+                square.style.background = '';
+                square.style.opacity = '';
+                square.style.transform = '';
                 
                 // 기존 클래스 제거
-                square.classList.remove('last-move', 'disabled');
+                square.classList.remove('last-move', 'disabled', 'winning', 'hover');
+                
+                // 기존 돌 요소 강제 제거
+                const existingStones = square.querySelectorAll('.stone');
+                existingStones.forEach(stone => {
+                    stone.style.display = 'none';
+                    stone.style.opacity = '0';
+                    stone.remove();
+                });
                 
                 // 안전한 보드 값 체크
                 if (this.board[row] && this.board[row][col]) {
@@ -1288,7 +1312,7 @@ class OmokGame {
     clearAllStones() {
         console.log('🧹 clearAllStones 호출 - 모든 돌 완전 제거');
         
-        // 모든 square에서 돌 제거
+        // 1단계: 모든 square에서 돌 제거
         for (let row = 0; row < 19; row++) {
             for (let col = 0; col < 19; col++) {
                 const squareIndex = row * 19 + col;
@@ -1299,31 +1323,51 @@ class OmokGame {
                     square.innerHTML = '';
                     
                     // 모든 관련 클래스 제거
-                    square.classList.remove('last-move', 'disabled', 'winning');
+                    square.classList.remove('last-move', 'disabled', 'winning', 'hover');
                     
                     // 스타일 초기화
                     square.style.cssText = '';
+                    square.style.background = '';
+                    square.style.opacity = '';
+                    square.style.transform = '';
                     
                     // 돌 관련 모든 요소 강제 제거
                     const stones = square.querySelectorAll('.stone');
                     stones.forEach(stone => {
+                        stone.style.display = 'none';
                         stone.remove();
                     });
                     
                     // 호버 효과 제거
                     const hoverElements = square.querySelectorAll('.hover-preview');
                     hoverElements.forEach(element => {
+                        element.style.display = 'none';
                         element.remove();
                     });
                 }
             }
         }
         
-        // 추가적인 정리
+        // 2단계: 전체 보드에서 모든 돌 요소 강제 제거
         const allStones = this.omokboard.querySelectorAll('.stone');
         allStones.forEach(stone => {
+            stone.style.display = 'none';
+            stone.style.opacity = '0';
             stone.remove();
         });
+        
+        // 3단계: 모든 호버 효과 제거
+        const allHoverElements = this.omokboard.querySelectorAll('.hover-preview');
+        allHoverElements.forEach(element => {
+            element.style.display = 'none';
+            element.remove();
+        });
+        
+        // 4단계: DOM 강제 새로고침
+        this.omokboard.style.display = 'none';
+        setTimeout(() => {
+            this.omokboard.style.display = 'grid';
+        }, 10);
         
         console.log('✅ clearAllStones 완료 - 모든 돌 제거됨');
     }
@@ -1524,8 +1568,15 @@ class OmokGame {
         // 타이머 정지
         this.stopTimer();
         
-        // 모든 돌 완전 제거
+        // 모든 돌 완전 제거 (즉시)
+        console.log('🧹 resetGame - 모든 돌 제거');
         this.clearAllStones();
+        
+        // 추가적인 강제 초기화
+        setTimeout(() => {
+            this.clearAllStones();
+            console.log('🧹 resetGame - 추가 초기화 완료');
+        }, 50);
         
         // UI 업데이트
         this.updateBoard();
