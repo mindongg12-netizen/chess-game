@@ -582,9 +582,25 @@
     updateCapturedPieces() {
         const capturedChoEl = document.getElementById('capturedCho');
         const capturedHanEl = document.getElementById('capturedHan');
+        
+        if (!capturedChoEl || !capturedHanEl) {
+            console.error('❌ 잡힌 기물 표시 영역을 찾을 수 없습니다:', {
+                capturedCho: !!capturedChoEl,
+                capturedHan: !!capturedHanEl
+            });
+            return;
+        }
+        
         if (!this.capturedPieces) this.capturedPieces = { cho: [], han: [] };
-        capturedChoEl.innerHTML = this.capturedPieces.cho.map(p => `<span class="piece cho">${this.pieces.cho[p.type]}</span>`).join(' ');
-        capturedHanEl.innerHTML = this.capturedPieces.han.map(p => `<span class="piece han">${this.pieces.han[p.type]}</span>`).join(' ');
+        
+        // 잡힌 기물을 해당 영역에 표시 (captured-piece 클래스 사용)
+        capturedChoEl.innerHTML = this.capturedPieces.cho.map(p => `<span class="captured-piece cho">${this.pieces.cho[p.type]}</span>`).join(' ');
+        capturedHanEl.innerHTML = this.capturedPieces.han.map(p => `<span class="captured-piece han">${this.pieces.han[p.type]}</span>`).join(' ');
+        
+        console.log('🎯 잡힌 기물 업데이트:', {
+            cho: this.capturedPieces.cho.length,
+            han: this.capturedPieces.han.length
+        });
     }
 
     // --- 이하 코드는 체스 게임과 거의 동일한 UI/온라인 로직 ---
