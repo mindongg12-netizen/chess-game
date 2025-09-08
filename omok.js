@@ -292,27 +292,20 @@ class OmokGame {
             console.log('🔥 오프라인 모드로 게임 시작');
             this.gameCode = this.generateRoomCode();
             this.hostPlayerName = hostName;
+            this.guestPlayerName = 'Player 2'; // 오프라인용 게스트 이름
             this.isRoomHost = true;
             this.isRoomGuest = false;
             this.isOnlineGame = false; // 오프라인 모드
             
             document.getElementById('gameMenu').style.display = 'none';
             document.getElementById('gameContainer').style.display = 'block';
-            this.showGameCode();
-            this.updatePlayerInfo();
-            this.showWaitingState();
+            this.gameCodeContainer.style.display = 'none'; // 오프라인에서는 코드 숨김
             
             // 오프라인에서는 바로 게임 시작
-            this.gameStarted = true;
-            this.isGameInProgress = true;
-            this.startGameBtnInRoom.style.display = 'none';
-            this.resetBtn.style.display = 'block';
-            this.startTimer();
-            this.updateCurrentPlayer();
-            this.updateGameStatus();
-            this.updateBoard();
+            this.handleGameStart();
+            this.updatePlayerInfo();
             
-            console.log(`✅ 오프라인 방 생성 완료: ${this.gameCode}`);
+            console.log(`✅ 오프라인 방 생성 완료`);
             return;
         }
 
@@ -667,7 +660,7 @@ class OmokGame {
         setTimeout(() => {
             alert('🎮 게임이 재시작되었습니다! 🎮');
         }, 500);
-    }ㅎ
+    }
 
     endGame(winner) {
         console.log('🎯 endGame 호출됨, winner:', winner);
@@ -1604,39 +1597,50 @@ class OmokGame {
     }
 
     resetGame() {
-        console.log('🔄 resetGame 호출됨');
-        
-        // 게임 상태 초기화 (chess/janggi와 동일한 방식)
+        console.log('🔄 resetGame called for a full reset');
+
+        // Stop any ongoing processes
+        this.stopTimer();
+
+        // Aggressively clear all stone elements from the board DOM
+        this.clearAllStones();
+
+        // Reset all game state variables
         this.board = Array(19).fill().map(() => Array(19).fill(null));
         this.currentPlayer = 'black';
-        this.gameStarted = false;
+        this.gameStarted = true; // Let's make it restart immediately
         this.gameEnded = false;
-        this.isGameInProgress = false;
+        this.isGameInProgress = true; // A new game is ready
         this.lastMove = null;
         this.winningLine = null;
         this.hoveredCell = null;
         this.isMovePending = false;
         
-        console.log('🔄 게임 상태 초기화 완료');
-        
-        // 타이머 정지
-        this.stopTimer();
-        
-        // UI 업데이트 (chess/janggi와 동일한 방식)
-        this.updateBoard();
+        console.log('🔄 Game state has been reset');
+
+        // Update UI to reflect the new game state
+        this.updateBoard(); // This will render an empty board, which is fine
         this.updateCurrentPlayer();
         this.updateGameStatus();
-        
-        // 버튼 상태 업데이트
+        this.startTimer(); // Start the timer for the new game
+
+        // Adjust button visibility for a started game
         if (this.startGameBtnInRoom) {
-            this.startGameBtnInRoom.style.display = 'block';
+            this.startGameBtnInRoom.style.display = 'none';
         }
         if (this.resetBtn) {
-            this.resetBtn.style.display = 'none';
+            this.resetBtn.style.display = 'block';
+        }
+
+        // Ensure any win popups are removed
+        const existingPopup = document.getElementById('winPopup');
+        if (existingPopup) {
+            existingPopup.remove();
         }
         
-        console.log('✅ resetGame 완료');
+        console.log('✅ resetGame complete. New game ready.');
     }
+
 
     backToMenu() {
         // Clean up Firebase listeners to prevent memory leaks
@@ -1664,7 +1668,7 @@ class OmokGame {
         // 상태 초기화
         this.gameStarted = false;
         this.isGameInProgress = false;
-            this.isRoomHost = false;
+        this.isRoomHost = false;
         this.isRoomGuest = false;
         this.isOnlineGame = false;
         this.hostPlayerName = '';
