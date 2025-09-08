@@ -504,16 +504,147 @@ header h1 {
 
 /* Responsive Design (from chess, adjusted for Janggi) */
 @media (max-width: 768px) {
+    header h1 {
+        font-size: 2rem;
+    }
+    
     .janggiboard {
         grid-template-columns: repeat(9, 38px);
         grid-template-rows: repeat(10, 38px);
         width: 344px; /* 38*9 + 2 */
         height: 382px; /* 38*10 + 2 */
     }
+    
+    .square {
+        width: 38px;
+        height: 38px;
+    }
+    
     .piece {
         width: 34px;
         height: 34px;
         font-size: 1.2rem;
+        color: #000000; /* 모바일에서도 장기말을 검은색으로 명시 */
+        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+    }
+    
+    .game-info {
+        width: 344px;
+        padding: 10px 20px;
+    }
+    
+    .game-status {
+        width: 344px;
+        padding: 10px;
+    }
+    
+    .game-info {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .game-code {
+        font-size: 1.2rem;
+        min-width: 80px;
+    }
+    
+    .copy-btn {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+    
+    .start-game-btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+    }
+    
+    .game-controls {
+        gap: 10px;
+    }
+    
+    .room-code-input {
+        width: 120px;
+        font-size: 1rem;
+        padding: 10px 15px;
+    }
+    
+    .join-btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+    }
+    
+    .code-input-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .name-input {
+        width: 150px;
+        font-size: 1rem;
+        padding: 10px 15px;
+    }
+    
+    .name-input-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .janggi-area {
+        flex-direction: column;
+        gap: 20px;
+        max-width: 100%;
+        margin: 0 auto 20px auto; /* 모바일에서 하단 20px 마진 */
+    }
+    
+    .player-container {
+        min-width: 100px;
+        padding: 10px;
+    }
+    
+    .player-container.han-player {
+        order: 1; /* 장기판 위에 배치 */
+    }
+    
+    .janggiboard {
+        margin: 0 auto; /* 중앙 정렬 */
+        order: 2; /* 가운데 */
+    }
+    
+    .player-container.cho-player {
+        order: 3; /* 장기판 아래로 배치 */
+    }
+    
+    .game-info, .game-status {
+        max-width: 100%;
+        width: 100%;
+        margin: 0 auto; /* 중앙 정렬 */
+    }
+    
+    .game-info {
+        margin: 0 auto 20px auto; /* 모바일에서 하단 20px 마진 */
+    }
+    
+    .player-avatar {
+        font-size: 2rem;
+    }
+    
+    .player-name-side {
+        font-size: 1rem;
+        max-width: 80px;
+    }
+    
+    .player-role {
+        font-size: 0.8rem;
+    }
+    
+    .timer {
+        font-size: 1.5rem;
+        padding: 8px 15px;
+        min-width: 60px;
+    }
+    
+    #capturedPieces {
+        flex-direction: column;
     }
     
     /* 모바일에서 게임 선택 버튼 크기 조정 */
@@ -526,14 +657,4 @@ header h1 {
     .game-select-icon {
         font-size: 14px;
     }
-    
-    .janggi-area {
-        flex-direction: column;
-        gap: 15px;
-    }
-    .player-container.han-player { order: 1; }
-    .janggiboard { order: 2; }
-    .player-container.cho-player { order: 3; }
-
-    .game-info { flex-direction: column; gap: 15px; }
 }
