@@ -605,7 +605,7 @@ header h1 {
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
-    z-index: 40 !important;
+    z-index: 100 !important;
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;

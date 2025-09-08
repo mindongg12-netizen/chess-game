@@ -287,8 +287,32 @@ class OmokGame {
             return;
         }
         
+        // 오프라인 모드 지원
         if (!this.database) {
-            alert('Firebase에 연결 중입니다. 잠시 후 다시 시도해주세요.');
+            console.log('🔥 오프라인 모드로 게임 시작');
+            this.gameCode = this.generateRoomCode();
+            this.hostPlayerName = hostName;
+            this.isRoomHost = true;
+            this.isRoomGuest = false;
+            this.isOnlineGame = false; // 오프라인 모드
+            
+            document.getElementById('gameMenu').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            this.showGameCode();
+            this.updatePlayerInfo();
+            this.showWaitingState();
+            
+            // 오프라인에서는 바로 게임 시작
+            this.gameStarted = true;
+            this.isGameInProgress = true;
+            this.startGameBtnInRoom.style.display = 'none';
+            this.resetBtn.style.display = 'block';
+            this.startTimer();
+            this.updateCurrentPlayer();
+            this.updateGameStatus();
+            this.updateBoard();
+            
+            console.log(`✅ 오프라인 방 생성 완료: ${this.gameCode}`);
             return;
         }
         
@@ -323,7 +347,7 @@ class OmokGame {
             this.showWaitingState();
             this.setupFirebaseListeners();
             
-            console.log(`✅ 방 생성 완료: ${this.gameCode}`);
+            console.log(`✅ 온라인 방 생성 완료: ${this.gameCode}`);
         } catch (error) {
             console.error('❌ Failed to create room:', error);
             alert('방 만들기에 실패했습니다: ' + error.message);
@@ -443,6 +467,7 @@ class OmokGame {
     }
 
     handleGameStart() {
+        console.log('🎮 handleGameStart 호출');
         this.gameStarted = true;
         this.isGameInProgress = true;
         this.startGameBtnInRoom.style.display = 'none';
@@ -450,7 +475,12 @@ class OmokGame {
         this.startTimer();
         this.updateCurrentPlayer();
         this.updateGameStatus();
-        console.log('✅ 게임 시작됨');
+        this.updateBoard(); // 보드도 업데이트
+        console.log('✅ 게임 시작됨 - 상태:', {
+            gameStarted: this.gameStarted,
+            isGameInProgress: this.isGameInProgress,
+            currentPlayer: this.currentPlayer
+        });
     }
 
     handleGameRestart(gameData) {
@@ -478,14 +508,23 @@ class OmokGame {
     }
 
     async startActualGame() {
-        if (!this.isRoomHost || !this.guestPlayerName) return;
+        console.log('🚀 startActualGame 호출');
+        console.log('호스트 여부:', this.isRoomHost);
+        console.log('게스트 이름:', this.guestPlayerName);
+        
+        if (!this.isRoomHost || !this.guestPlayerName) {
+            console.log('❌ 호스트가 아니거나 게스트가 없음');
+            return;
+        }
         
         try {
+            console.log('✅ 게임 시작 요청');
             await this.gameRef.update({
                 gameStarted: true,
                 isGameInProgress: true,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
+            console.log('✅ 게임 시작 완료');
         } catch (error) {
             console.error('❌ Game start failed:', error);
             alert('게임 시작에 실패했습니다: ' + error.message);
@@ -493,68 +532,119 @@ class OmokGame {
     }
 
     async makeMove(row, col) {
-        if (!this.isGameInProgress || this.isMovePending) return;
-        if (this.board[row][col] !== null) return;
+        console.log(`🎯 makeMove 호출: (${row}, ${col})`);
+        console.log('게임 상태:', {
+            isGameInProgress: this.isGameInProgress,
+            isMovePending: this.isMovePending,
+            currentPlayer: this.currentPlayer,
+            isRoomHost: this.isRoomHost,
+            isRoomGuest: this.isRoomGuest,
+            isOnlineGame: this.isOnlineGame,
+            boardValue: this.board[row][col]
+        });
         
-        // 턴 체크
-        const isMyTurn = (this.isRoomHost && this.currentPlayer === 'black') || 
-                        (this.isRoomGuest && this.currentPlayer === 'white');
-        if (!isMyTurn) return;
+        if (!this.isGameInProgress || this.isMovePending) {
+            console.log('❌ 게임이 진행 중이 아니거나 이동 대기 중');
+            return;
+        }
+        if (this.board[row][col] !== null) {
+            console.log('❌ 이미 돌이 있는 위치');
+            return;
+        }
         
+        // 턴 체크 (오프라인 모드에서는 항상 허용)
+        if (this.isOnlineGame) {
+            const isMyTurn = (this.isRoomHost && this.currentPlayer === 'black') || 
+                            (this.isRoomGuest && this.currentPlayer === 'white');
+            if (!isMyTurn) {
+                console.log('❌ 내 차례가 아님');
+                return;
+            }
+        }
+        
+        console.log('✅ 수를 둘 수 있음, 돌 배치 시작');
         this.isMovePending = true;
         this.board[row][col] = this.currentPlayer;
         this.lastMove = { row, col };
         
+        // 즉시 로컬 보드 업데이트
+        this.updateBoard();
+        console.log('✅ 로컬 보드 업데이트 완료');
+        
         // 승리 체크
         const winResult = this.checkWin(row, col);
         if (winResult.win) {
+            console.log('🎉 승리!');
             this.winningLine = winResult.line;
-            const winner = this.currentPlayer;
+            this.gameEnded = true;
+            this.isGameInProgress = false;
+            this.stopTimer();
+            this.updateGameStatus();
             
-            try {
-                await this.gameRef.update({
-                    board: this.board,
-                    gameEnded: true,
-                    winner: winner,
-                    lastMove: this.lastMove,
-                    winningLine: this.winningLine,
-                    lastActivity: firebase.database.ServerValue.TIMESTAMP
-                });
-            } catch (error) {
-                console.error('❌ Move update failed:', error);
+            if (this.isOnlineGame && this.gameRef) {
+                try {
+                    await this.gameRef.update({
+                        board: this.board,
+                        gameEnded: true,
+                        winner: this.currentPlayer,
+                        lastMove: this.lastMove,
+                        winningLine: this.winningLine,
+                        lastActivity: firebase.database.ServerValue.TIMESTAMP
+                    });
+                } catch (error) {
+                    console.error('❌ Move update failed:', error);
+                }
             }
             return;
         }
         
         // 무승부 체크
         if (this.isBoardFull()) {
-            try {
-                await this.gameRef.update({
-                    board: this.board,
-                    gameEnded: true,
-                    winner: null,
-                    lastMove: this.lastMove,
-                    lastActivity: firebase.database.ServerValue.TIMESTAMP
-                });
-            } catch (error) {
-                console.error('❌ Move update failed:', error);
+            console.log('🤝 무승부!');
+            this.gameEnded = true;
+            this.isGameInProgress = false;
+            this.stopTimer();
+            this.updateGameStatus();
+            
+            if (this.isOnlineGame && this.gameRef) {
+                try {
+                    await this.gameRef.update({
+                        board: this.board,
+                        gameEnded: true,
+                        winner: null,
+                        lastMove: this.lastMove,
+                        lastActivity: firebase.database.ServerValue.TIMESTAMP
+                    });
+                } catch (error) {
+                    console.error('❌ Move update failed:', error);
+                }
             }
             return;
         }
         
         // 턴 변경
-        const nextPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
+        this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
+        this.restartTimer();
+        this.updateCurrentPlayer();
+        console.log(`🔄 턴 변경: ${this.currentPlayer}`);
         
-        try {
-            await this.gameRef.update({
-                board: this.board,
-                currentPlayer: nextPlayer,
-                lastMove: this.lastMove,
-                lastActivity: firebase.database.ServerValue.TIMESTAMP
-            });
-        } catch (error) {
-            console.error('❌ Move update failed:', error);
+        if (this.isOnlineGame && this.gameRef) {
+            try {
+                await this.gameRef.update({
+                    board: this.board,
+                    currentPlayer: this.currentPlayer,
+                    lastMove: this.lastMove,
+                    lastActivity: firebase.database.ServerValue.TIMESTAMP
+                });
+                console.log('✅ Firebase 업데이트 완료');
+            } catch (error) {
+                console.error('❌ Move update failed:', error);
+                this.isMovePending = false;
+            }
+        } else {
+            // 오프라인 모드에서는 즉시 다음 턴으로
             this.isMovePending = false;
+            console.log('✅ 오프라인 모드 - 턴 변경 완료');
         }
     }
 
@@ -618,14 +708,18 @@ class OmokGame {
     }
 
     updateBoard() {
-        console.log('updateBoard 호출');
+        console.log('🔄 updateBoard 호출');
         console.log('보드 상태:', this.board);
+        console.log('omokboard 자식 개수:', this.omokboard.children.length);
         
+        let stoneCount = 0;
         for (let row = 0; row < 19; row++) {
             for (let col = 0; col < 19; col++) {
-                const square = this.omokboard.children[row * 19 + col];
+                const squareIndex = row * 19 + col;
+                const square = this.omokboard.children[squareIndex];
+                
                 if (!square) {
-                    console.log(`Square not found at (${row}, ${col})`);
+                    console.log(`❌ Square not found at (${row}, ${col}), index: ${squareIndex}`);
                     continue;
                 }
                 
@@ -635,7 +729,8 @@ class OmokGame {
                 square.classList.remove('last-move', 'disabled');
                 
                 if (this.board[row][col]) {
-                    console.log(`돌 생성: (${row}, ${col}) = ${this.board[row][col]}`);
+                    stoneCount++;
+                    console.log(`🪨 돌 생성: (${row}, ${col}) = ${this.board[row][col]}`);
                     const stone = document.createElement('div');
                     stone.className = `stone ${this.board[row][col]}`;
                     stone.textContent = this.board[row][col] === 'black' ? '●' : '○';
@@ -654,7 +749,7 @@ class OmokGame {
                         cursor: pointer !important;
                         transition: all 0.2s ease !important;
                         box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
-                        z-index: 40 !important;
+                        z-index: 100 !important;
                         top: 50% !important;
                         left: 50% !important;
                         transform: translate(-50%, -50%) !important;
@@ -672,7 +767,22 @@ class OmokGame {
                     }
                     
                     square.appendChild(stone);
-                    console.log(`돌 추가 완료: (${row}, ${col})`);
+                    console.log(`✅ 돌 추가 완료: (${row}, ${col})`);
+                    
+                    // 돌이 실제로 DOM에 추가되었는지 확인
+                    setTimeout(() => {
+                        const addedStone = square.querySelector('.stone');
+                        if (addedStone) {
+                            const rect = addedStone.getBoundingClientRect();
+                            console.log(`돌 확인: (${row}, ${col})`, {
+                                visible: rect.width > 0 && rect.height > 0,
+                                rect: rect,
+                                style: addedStone.style.cssText
+                            });
+                        } else {
+                            console.log(`❌ 돌이 DOM에 없음: (${row}, ${col})`);
+                        }
+                    }, 10);
                 }
                 
                 // 마지막 수 표시
@@ -687,7 +797,7 @@ class OmokGame {
             }
         }
         
-        console.log('updateBoard 완료');
+        console.log(`✅ updateBoard 완료 - 총 ${stoneCount}개 돌 렌더링`);
     }
 
     updateCurrentPlayer() {
