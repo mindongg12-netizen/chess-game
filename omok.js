@@ -10,19 +10,19 @@ class OmokGame {
         this.timerInterval = null;
         this.winningLine = null;
         this.hoveredCell = null;
-        
+
         // 온라인 게임 속성 (janggi와 동일)
         this.gameCode = null;
         this.isOnlineGame = false;
         this.isGameInProgress = false;
         this.isRoomHost = false; // 흑돌
         this.isRoomGuest = false; // 백돌
-        this.isMovePending = false;
-        
+        this.isMovePending = false; 
+
         // 플레이어 이름
         this.hostPlayerName = '';
         this.guestPlayerName = '';
-        
+
         // Firebase 실시간 통신
         this.database = null;
         this.playerId = this.generatePlayerId();
@@ -96,7 +96,7 @@ class OmokGame {
             e.target.value = e.target.value.replace(/[^0-9]/g, '');
         });
     }
-
+    
     generatePlayerId() {
         return 'player_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
     }
@@ -109,7 +109,7 @@ class OmokGame {
         if (window.firebaseReady && window.database) {
             this.database = window.database;
             console.log('🔥 Firebase Connection Complete');
-        } else {
+            } else {
             console.log('⏳ Waiting for Firebase to load...');
             document.addEventListener('firebaseReady', () => {
                 this.database = window.database;
@@ -315,7 +315,7 @@ class OmokGame {
             console.log(`✅ 오프라인 방 생성 완료: ${this.gameCode}`);
             return;
         }
-        
+
         try {
             this.gameCode = this.generateRoomCode();
             this.hostPlayerName = hostName;
@@ -420,7 +420,13 @@ class OmokGame {
                     return;
                 }
                 
-                console.log('🔥 Firebase 데이터 수신:', gameData);
+                console.log('🔥 Firebase 데이터 수신:', {
+                    currentPlayer: gameData.currentPlayer,
+                    gameStarted: gameData.gameStarted,
+                    gameEnded: gameData.gameEnded,
+                    board: gameData.board ? '보드 있음' : '보드 없음',
+                    lastMove: gameData.lastMove
+                });
                 
                 this.hostPlayerName = gameData.hostName || '';
                 if (gameData.guestId && !this.guestPlayerName) {
@@ -431,29 +437,36 @@ class OmokGame {
                 }
                 this.updatePlayerInfo();
 
-                // 안전한 보드 동기화
+                // 보드 동기화 (항상 실행)
                 if (gameData.board) {
+                    console.log('🔄 보드 동기화 시작');
                     this.syncBoard(gameData.board);
                 }
 
-                // 안전한 현재 플레이어 업데이트
-                if (gameData.currentPlayer && gameData.currentPlayer !== this.currentPlayer) {
+                // 현재 플레이어 업데이트 (항상 실행)
+                if (gameData.currentPlayer) {
+                    console.log(`🔄 현재 플레이어 업데이트: ${this.currentPlayer} → ${gameData.currentPlayer}`);
                     this.currentPlayer = gameData.currentPlayer;
                     this.updateCurrentPlayer();
                     this.restartTimer();
                 }
                 
+                // 이동 대기 상태 해제 (항상 실행)
                 this.isMovePending = false;
+                console.log('✅ isMovePending = false');
                 
-                // 안전한 게임 상태 업데이트
+                // 게임 상태 업데이트
                 if (gameData.gameStarted && !this.isGameInProgress) {
+                    console.log('🎮 게임 시작 처리');
                     this.handleGameStart();
                 }
                 if (gameData.gameEnded && this.isGameInProgress) {
+                    console.log('🏁 게임 종료 처리');
                     this.endGame(gameData.winner);
                 }
                 if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
                     if (!this.isGameInProgress || !this.gameStarted) {
+                        console.log('🔄 게임 재시작 처리');
                         this.handleGameRestart(gameData);
                     }
                 }
@@ -478,7 +491,6 @@ class OmokGame {
     syncBoard(remoteBoard) {
         console.log('🔄 syncBoard 호출');
         console.log('원격 보드 타입:', typeof remoteBoard);
-        console.log('원격 보드:', remoteBoard);
         
         // 원격 보드가 null이거나 undefined인 경우
         if (!remoteBoard) {
@@ -486,6 +498,8 @@ class OmokGame {
             this.updateBoard();
             return;
         }
+        
+        let newBoard = null;
         
         // 원격 보드가 배열인 경우
         if (Array.isArray(remoteBoard)) {
@@ -500,7 +514,7 @@ class OmokGame {
                 }
                 
                 if (isValid) {
-                    this.board = remoteBoard;
+                    newBoard = remoteBoard;
                     console.log('✅ 보드 동기화 완료 (배열)');
                 } else {
                     console.log('❌ 원격 보드 배열 구조가 잘못됨, 현재 보드 유지');
@@ -514,7 +528,7 @@ class OmokGame {
             console.log('🔄 객체 형태의 보드 데이터 처리');
             try {
                 // 객체를 2차원 배열로 변환
-                const newBoard = Array(19).fill().map(() => Array(19).fill(null));
+                newBoard = Array(19).fill().map(() => Array(19).fill(null));
                 
                 for (let row = 0; row < 19; row++) {
                     const rowKey = row.toString();
@@ -528,7 +542,6 @@ class OmokGame {
                     }
                 }
                 
-                this.board = newBoard;
                 console.log('✅ 보드 동기화 완료 (객체 → 배열 변환)');
             } catch (error) {
                 console.error('❌ 객체 보드 변환 실패:', error);
@@ -538,7 +551,32 @@ class OmokGame {
             console.log('❌ 원격 보드가 배열도 객체도 아님:', typeof remoteBoard);
         }
         
-        this.updateBoard();
+        // 보드가 변경되었을 때만 업데이트
+        if (newBoard) {
+            const boardChanged = this.hasBoardChanged(newBoard);
+            if (boardChanged) {
+                console.log('🔄 보드 변경 감지, 업데이트 실행');
+                this.board = newBoard;
+                this.updateBoard();
+            } else {
+                console.log('📋 보드 변경 없음, 업데이트 스킵');
+            }
+        } else {
+            this.updateBoard();
+        }
+    }
+    
+    hasBoardChanged(newBoard) {
+        if (!this.board || !newBoard) return true;
+        
+        for (let row = 0; row < 19; row++) {
+            for (let col = 0; col < 19; col++) {
+                if (this.board[row][col] !== newBoard[row][col]) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     handleGameStart() {
@@ -700,8 +738,8 @@ class OmokGame {
                         board: boardForFirebase,
                         gameEnded: true,
                         winner: null,
-                        lastMove: this.lastMove,
-                        lastActivity: firebase.database.ServerValue.TIMESTAMP
+                    lastMove: this.lastMove,
+                    lastActivity: firebase.database.ServerValue.TIMESTAMP
                     });
                 } catch (error) {
                     console.error('❌ Move update failed:', error);
@@ -723,6 +761,12 @@ class OmokGame {
                     row.map(cell => cell === null ? null : cell)
                 );
                 
+                console.log('📤 Firebase에 업데이트 전송:', {
+                    currentPlayer: this.currentPlayer,
+                    lastMove: this.lastMove,
+                    boardSize: boardForFirebase.length
+                });
+                
                 await this.gameRef.update({
                     board: boardForFirebase,
                     currentPlayer: this.currentPlayer,
@@ -730,6 +774,9 @@ class OmokGame {
                     lastActivity: firebase.database.ServerValue.TIMESTAMP
                 });
                 console.log('✅ Firebase 업데이트 완료');
+                
+                // Firebase 리스너가 isMovePending을 false로 설정할 때까지 기다리지 않음
+                // 리스너에서 자동으로 처리됨
             } catch (error) {
                 console.error('❌ Move update failed:', error);
                 this.isMovePending = false;
@@ -746,7 +793,7 @@ class OmokGame {
         if (!this.board || !this.board[row] || this.board[row][col] === null) {
             return { win: false, line: null };
         }
-        
+
         const directions = [
             [0, 1],   // 가로
             [1, 0],   // 세로
@@ -796,9 +843,9 @@ class OmokGame {
 
     isBoardFull() {
         if (!this.board || !Array.isArray(this.board)) {
-            return false;
-        }
-        
+        return false;
+    }
+
         for (let row = 0; row < 19; row++) {
             if (!this.board[row] || !Array.isArray(this.board[row])) {
                 return false;
@@ -926,9 +973,9 @@ class OmokGame {
     updateCurrentPlayer() {
         if (this.gameEnded) {
             this.currentPlayerEl.textContent = '게임 종료';
-            return;
-        }
-        
+                return;
+            }
+            
         if (!this.gameStarted) {
             this.currentPlayerEl.textContent = '대기중';
                 return;
@@ -1087,7 +1134,7 @@ class OmokGame {
         // 상태 초기화
         this.gameStarted = false;
         this.isGameInProgress = false;
-        this.isRoomHost = false;
+            this.isRoomHost = false;
         this.isRoomGuest = false;
         this.isOnlineGame = false;
         this.hostPlayerName = '';
