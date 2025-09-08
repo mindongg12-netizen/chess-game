@@ -697,12 +697,38 @@ class OmokGame {
             message = '무승부입니다!';
             emoji = '🤝';
         } else {
-            const winnerName = winner === 'black' ? 
-                (this.isRoomHost ? this.hostPlayerName : this.guestPlayerName) :
-                (this.isRoomGuest ? this.guestPlayerName : this.hostPlayerName);
+            // 승리자 이름 결정
+            let winnerName = '';
+            let isMyWin = false;
             
-            message = `${winnerName}님이 승리했습니다!`;
-            emoji = winner === 'black' ? '⚫' : '⚪';
+            if (winner === 'black') {
+                // 흑돌이 승리한 경우
+                if (this.isRoomHost) {
+                    winnerName = this.hostPlayerName;
+                    isMyWin = true;
+                } else if (this.isRoomGuest) {
+                    winnerName = this.guestPlayerName;
+                    isMyWin = false;
+                }
+            } else if (winner === 'white') {
+                // 백돌이 승리한 경우
+                if (this.isRoomHost) {
+                    winnerName = this.guestPlayerName;
+                    isMyWin = false;
+                } else if (this.isRoomGuest) {
+                    winnerName = this.hostPlayerName;
+                    isMyWin = true;
+                }
+            }
+            
+            // 메시지 결정
+            if (isMyWin) {
+                message = '축하합니다! 당신이 승리했습니다! 🎉';
+                emoji = winner === 'black' ? '⚫' : '⚪';
+            } else {
+                message = `${winnerName}님이 승리했습니다. 아쉽게 패배했습니다. 😔`;
+                emoji = winner === 'black' ? '⚫' : '⚪';
+            }
         }
         
         popupContent.innerHTML = `
@@ -847,10 +873,36 @@ class OmokGame {
                 if (winner === null) {
                     alertMessage = '무승부입니다!';
                 } else {
-                    const winnerName = winner === 'black' ? 
-                        (this.isRoomHost ? this.hostPlayerName : this.guestPlayerName) :
-                        (this.isRoomGuest ? this.guestPlayerName : this.hostPlayerName);
-                    alertMessage = `${winnerName}님이 승리했습니다!`;
+                    // 승리자 이름 결정
+                    let winnerName = '';
+                    let isMyWin = false;
+                    
+                    if (winner === 'black') {
+                        // 흑돌이 승리한 경우
+                        if (this.isRoomHost) {
+                            winnerName = this.hostPlayerName;
+                            isMyWin = true;
+                        } else if (this.isRoomGuest) {
+                            winnerName = this.guestPlayerName;
+                            isMyWin = false;
+                        }
+                    } else if (winner === 'white') {
+                        // 백돌이 승리한 경우
+                        if (this.isRoomHost) {
+                            winnerName = this.guestPlayerName;
+                            isMyWin = false;
+                        } else if (this.isRoomGuest) {
+                            winnerName = this.hostPlayerName;
+                            isMyWin = true;
+                        }
+                    }
+                    
+                    // 메시지 결정
+                    if (isMyWin) {
+                        alertMessage = '축하합니다! 당신이 승리했습니다! 🎉';
+                    } else {
+                        alertMessage = `${winnerName}님이 승리했습니다. 아쉽게 패배했습니다. 😔`;
+                    }
                 }
                 
                 if (confirm(alertMessage + '\n\n다시 하시겠습니까?')) {
