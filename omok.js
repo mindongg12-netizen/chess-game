@@ -662,10 +662,31 @@ class OmokGame {
         this.updateGameStatus();
         console.log('✅ 게임 종료:', winner);
         
-        // 승리 팝업 표시
-        console.log('🎯 showWinPopup 호출 시작');
-        this.showWinPopup(winner);
-        console.log('🎯 showWinPopup 호출 완료');
+        // chess와 동일한 스타일의 승리 메시지 표시
+        console.log('🎯 chess 스타일 승리 메시지 표시');
+        this.showChessStyleWinMessage(winner);
+        console.log('🎯 chess 스타일 승리 메시지 표시 완료');
+    }
+    
+    showChessStyleWinMessage(winner) {
+        console.log('🎯 showChessStyleWinMessage 시작, winner:', winner);
+        
+        // 내가 승자인지 패자인지 확인
+        const myColor = this.isRoomHost ? 'black' : 'white';
+        const isWinner = winner === myColor;
+        
+        // chess와 동일한 스타일의 메시지 표시
+        setTimeout(() => {
+            if (isWinner) {
+                // 승리자 메시지 (chess와 동일)
+                alert(`🎊 축하합니다! 승리하셨습니다! 🎊\n\n훌륭한 오목 실력이네요! 🏆`);
+            } else {
+                // 패배자 메시지 (chess와 동일)
+                alert(`😊 수고하셨습니다! 🎯\n\n다시 도전해보세요! 다음엔 더 잘하실 거예요! 💪\n화이팅! 🌟`);
+            }
+        }, 500);
+        
+        console.log('✅ chess 스타일 승리 메시지 표시 완료');
     }
     
     showWinPopup(winner) {
@@ -895,47 +916,19 @@ class OmokGame {
                 console.log('❌ 팝업이 DOM에서 찾을 수 없음');
                 
                 // PC 환경에서 팝업이 안 뜰 경우 백업 alert 사용
-                console.log('🎯 백업 alert 팝업 표시');
-                let alertMessage = '';
-                if (winner === null) {
-                    alertMessage = '무승부입니다!';
-                } else {
-                    // 승리자 이름 결정
-                    let winnerName = '';
-                    let isMyWin = false;
-                    
-                    if (winner === 'black') {
-                        // 흑돌이 승리한 경우
-                        if (this.isRoomHost) {
-                            winnerName = this.hostPlayerName;
-                            isMyWin = true;
-                        } else if (this.isRoomGuest) {
-                            winnerName = this.guestPlayerName;
-                            isMyWin = false;
-                        }
-                    } else if (winner === 'white') {
-                        // 백돌이 승리한 경우
-                        if (this.isRoomHost) {
-                            winnerName = this.guestPlayerName;
-                            isMyWin = false;
-                        } else if (this.isRoomGuest) {
-                            winnerName = this.hostPlayerName;
-                            isMyWin = true;
-                        }
-                    }
-                    
-                    // 메시지 결정
-                    if (isMyWin) {
-                        alertMessage = '축하합니다! 당신이 승리했습니다! 🎉';
-                    } else {
-                        alertMessage = `${winnerName}님이 승리했습니다. 아쉽게 패배했습니다. 😔`;
-                    }
-                }
+                console.log('🎯 백업 alert 팝업 표시 (chess 스타일)');
                 
-                if (confirm(alertMessage + '\n\n다시 하시겠습니까?')) {
-                    setTimeout(() => {
-                        this.resetGameFromPopup();
-                    }, 100);
+                // 내가 승자인지 패자인지 확인
+                const myColor = this.isRoomHost ? 'black' : 'white';
+                const isWinner = winner === myColor;
+                
+                // chess와 동일한 스타일의 메시지 표시
+                if (isWinner) {
+                    // 승리자 메시지 (chess와 동일)
+                    alert(`🎊 축하합니다! 승리하셨습니다! 🎊\n\n훌륭한 오목 실력이네요! 🏆`);
+                } else {
+                    // 패배자 메시지 (chess와 동일)
+                    alert(`😊 수고하셨습니다! 🎯\n\n다시 도전해보세요! 다음엔 더 잘하실 거예요! 💪\n화이팅! 🌟`);
                 }
             }
         }, 200);
