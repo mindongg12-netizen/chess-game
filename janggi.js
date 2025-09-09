@@ -24,14 +24,9 @@
         this.isRoomGuest = false; // 한(漢)
         this.isMovePending = false; 
 
-    // 플레이어 이름과 ID
-    this.hostPlayerName = '';
-    this.guestPlayerName = '';
-    this.whitePlayerId = null;
-    this.blackPlayerId = null;
-    this.whitePlayerName = '';
-    this.blackPlayerName = '';
-    this.myColor = null;
+        // 플레이어 이름
+        this.hostPlayerName = '';
+        this.guestPlayerName = '';
 
         // Firebase 실시간 통신
         this.database = null;
