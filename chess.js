@@ -19,7 +19,10 @@ class ChessGame {
         this.isRoomHost = false;
         this.isRoomGuest = false;
         // Flag to prevent moves while one is being processed
-        this.isMovePending = false; 
+        this.isMovePending = false;
+
+        // 승자 기록 (턴 스왑을 위한)
+        this.lastWinner = null; 
 
         // Player names
         this.hostPlayerName = '';
@@ -121,6 +124,7 @@ class ChessGame {
                 currentPlayer: 'white',
                 board: this.getInitialBoard(),
                 capturedPieces: { white: [], black: [] },
+                lastWinner: null,  // 턴 스왑을 위한 승자 기록 초기화
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             };
             this.gameRef = this.database.ref('games/' + this.gameCode);
@@ -147,16 +151,32 @@ class ChessGame {
             return;
         }
         console.log('🔄 Requesting online game restart');
+
+        // 턴 스왑 로직: 패배한 사람이 white가 되도록 결정
+        let startingPlayer = 'white'; // 기본값
+        if (this.lastWinner === 'white') {
+            // white가 이겼다면 black(패자)이 먼저 시작
+            startingPlayer = 'black';
+            console.log('🔄 턴 스왑 결정: white 승리 → black(패자)가 먼저 시작');
+        } else if (this.lastWinner === 'black') {
+            // black가 이겼다면 white(패자)이 먼저 시작
+            startingPlayer = 'white';
+            console.log('🔄 턴 스왑 결정: black 승리 → white(패자)가 먼저 시작');
+        } else {
+            console.log('🔄 턴 스왑 결정: 첫 게임 → white부터 시작');
+        }
+
         try {
             const initialBoard = this.getInitialBoard();
             await this.gameRef.update({
                 board: initialBoard,
-                currentPlayer: 'white',
+                currentPlayer: startingPlayer,  // 턴 스왑 적용
                 capturedPieces: { white: [], black: [] },
                 gameStarted: true,
                 isGameInProgress: true,
                 gameEnded: false,
                 winner: null,
+                lastWinner: this.lastWinner,  // 마지막 승자 정보 저장
                 gameRestarted: firebase.database.ServerValue.TIMESTAMP,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
@@ -196,6 +216,9 @@ class ChessGame {
         this.isOnlineGame = false;
         this.hostPlayerName = '';
         this.guestPlayerName = '';
+
+        // 턴 스왑을 위한 승자 기록 초기화
+        this.lastWinner = null;
     }
 
     initializeBoard() {
@@ -431,12 +454,15 @@ class ChessGame {
 
     endGame(winner) {
         console.log(`🎯 게임 종료: ${winner} 승리!`);
-        
+
+        // 승자 기록 (턴 스왑을 위해)
+        this.lastWinner = winner;
+
         // 게임 상태 업데이트
         this.isGameInProgress = false;
         this.gameStarted = false;
         this.stopTurnTimer();
-        
+
         // UI 업데이트
         const gameStatus = document.getElementById('gameStatus');
         const winnerText = winner === 'white' ? '백' : '흑';
@@ -444,21 +470,21 @@ class ChessGame {
         gameStatus.style.color = '#dc3545';
         gameStatus.style.fontSize = '1.3rem';
         gameStatus.style.fontWeight = 'bold';
-        
+
         // 타이머 표시 숨기기
         const timerElement = document.getElementById('turnTimer');
         if (timerElement) {
             timerElement.style.display = 'none';
         }
-        
+
         // 모든 말 선택 해제
         this.selectedSquare = null;
         this.clearHighlights();
-        
+
         // 내가 승자인지 패자인지 확인
         const myColor = this.isRoomHost ? 'white' : 'black';
         const isWinner = winner === myColor;
-        
+
         // 승리자와 패배자에게 다른 메시지 표시
         setTimeout(() => {
             if (isWinner) {
@@ -659,6 +685,12 @@ class ChessGame {
                    this.handleGameRestart(gameData);
                 }
             }
+
+            // 마지막 승자 정보 동기화 (턴 스왑을 위해)
+            if (gameData.lastWinner !== undefined) {
+                this.lastWinner = gameData.lastWinner;
+                console.log('🔄 마지막 승자 정보 동기화:', this.lastWinner);
+            }
         });
         this.listeners.push({ ref: this.gameRef, listener: gameListener });
     }
@@ -707,38 +739,52 @@ class ChessGame {
     
     handleGameRestart(gameData) {
         console.log('🔄 게임 재시작 처리:', gameData);
-        
+
         // 게임 상태 초기화
         this.gameStarted = true;
         this.isGameInProgress = true;
-        this.currentPlayer = 'white';
         this.selectedSquare = null;
         this.currentTurnTime = this.turnTimeLimit;
         this.isMovePending = false; // 게임 재시작 시 이동 플래그 초기화
-        
+
+        // 턴 스왑 로직: 패배한 사람이 white가 되도록 설정
+        if (this.lastWinner === 'white') {
+            // white가 이겼다면 다음 게임은 black(패자)이 white가 되게
+            this.currentPlayer = 'black';  // 패배자가 먼저 시작
+            console.log('🔄 턴 스왑: white 승리 → black(패자)가 먼저 시작');
+        } else if (this.lastWinner === 'black') {
+            // black가 이겼다면 다음 게임은 white(패자)이 white로 시작
+            this.currentPlayer = 'white';  // 패배자가 먼저 시작
+            console.log('🔄 턴 스왑: black 승리 → white(패자)가 먼저 시작');
+        } else {
+            // 첫 게임이거나 winner 정보가 없는 경우
+            this.currentPlayer = 'white';
+            console.log('🔄 첫 게임: white부터 시작');
+        }
+
         // 잡힌 기물 초기화
         this.capturedPieces = { white: [], black: [] };
         if (gameData.capturedPieces) {
             this.capturedPieces = gameData.capturedPieces;
         }
-        
+
         // UI 상태 복구
         const gameStatus = document.getElementById('gameStatus');
         gameStatus.textContent = '게임이 재시작되었습니다!';
         gameStatus.style.color = '#28a745';
         gameStatus.style.fontSize = '1.1rem';
         gameStatus.style.fontWeight = 'bold';
-        
+
         // 타이머 표시 복구
         const timerElement = document.getElementById('turnTimer');
         const timerContainer = timerElement ? timerElement.closest('.timer-container') : null;
-        
+
         if (timerElement) {
             // 타이머 요소 가시성 복구
             timerElement.style.display = 'block';
             timerElement.style.visibility = 'visible';
             timerElement.style.opacity = '1';
-            
+
             // 타이머 컨테이너도 확인
             if (timerContainer) {
                 timerContainer.style.display = 'flex';
@@ -746,7 +792,7 @@ class ChessGame {
                 timerContainer.style.opacity = '1';
                 console.log('🕐 타이머 컨테이너 표시 복구 완료');
             }
-            
+
             console.log('🕐 타이머 표시 복구 완료');
             console.log('📱 복구 후 타이머 상태:');
             console.log('  - display:', getComputedStyle(timerElement).display);
@@ -755,45 +801,45 @@ class ChessGame {
         } else {
             console.error('❌ turnTimer 엘리먼트를 찾을 수 없음');
         }
-        
+
         // 게임 UI 전체 가시성 확인
         const gameContainer = document.getElementById('gameContainer');
         const gameInfo = gameContainer ? gameContainer.querySelector('.game-info') : null;
-        
+
         if (gameContainer) {
             gameContainer.style.display = 'block';
             console.log('🎮 게임 컨테이너 표시 확인');
         }
-        
+
         if (gameInfo) {
             gameInfo.style.display = 'flex';
             console.log('📋 게임 정보 영역 표시 확인');
         }
-        
+
         // 버튼 상태 업데이트
         this.showGameButtons();
-        
+
         // 타이머 재시작 - 중요!
         this.resetTurnTimer();
         this.startTurnTimer(); // 타이머 시작 추가
         this.updateTimerDisplay(); // 타이머 표시 업데이트
-        
+
         // 1초 후 다시 한번 타이머 업데이트 (안전장치)
         setTimeout(() => {
             console.log('🔄 1초 후 타이머 재확인');
             this.updateTimerDisplay();
         }, 1000);
-        
+
         // 게임 상태 업데이트
         this.updateGameStatus();
-        
+
         // 보드 동기화 및 렌더링
         if (gameData.board) {
             this.syncBoard(gameData.board);
         }
-        
+
         console.log('✅ 게임 재시작 완료');
-        
+
         // 재시작 알림
         setTimeout(() => {
             alert('🎮 게임이 재시작되었습니다! 🎮');
