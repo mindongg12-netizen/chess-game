@@ -435,7 +435,7 @@ header h1 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.reset-btn, .menu-btn {
+.reset-btn, .resign-btn, .menu-btn {
     background: linear-gradient(45deg, #4ecdc4, #44a08d);
     color: white;
     border: none;
@@ -448,9 +448,17 @@ header h1 {
     min-width: 120px; /* 버튼 최소 너비 설정 */
 }
 
-.reset-btn:hover, .menu-btn:hover {
+.reset-btn:hover, .resign-btn:hover, .menu-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+.resign-btn {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+}
+
+.resign-btn:hover {
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
 }
 
 /* 체스 ?�역 ?��???*/
