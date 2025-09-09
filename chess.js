@@ -700,7 +700,7 @@ class ChessGame {
             }
 
             // Handle game end
-            if (gameData.gameEnded && this.isGameInProgress) {
+            if (gameData.gameEnded && this.isGameInProgress && gameData.winner) {
                 this.endGame(gameData.winner);
             }
 

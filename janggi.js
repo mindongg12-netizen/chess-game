@@ -759,7 +759,7 @@
             if (gameData.gameStarted && !this.isGameInProgress) {
                 this.handleGameStart();
             }
-            if (gameData.gameEnded && this.isGameInProgress) {
+            if (gameData.gameEnded && this.isGameInProgress && gameData.winner) {
                 this.endGame(gameData.winner);
             }
             if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
