@@ -24,13 +24,14 @@
         this.isRoomGuest = false; // 한(漢)
         this.isMovePending = false; 
 
-        // 플레이어 이름
-        this.hostPlayerName = '';
-        this.guestPlayerName = '';
-
-        // 승패 정보 저장
-        this.lastGameWinner = null; // 마지막 게임 승자 저장
-        this.lastGameLoser = null;  // 마지막 게임 패자 저장
+    // 플레이어 이름과 ID
+    this.hostPlayerName = '';
+    this.guestPlayerName = '';
+    this.whitePlayerId = null;
+    this.blackPlayerId = null;
+    this.whitePlayerName = '';
+    this.blackPlayerName = '';
+    this.myColor = null;
 
         // Firebase 실시간 통신
         this.database = null;
@@ -107,25 +108,14 @@
             this.isRoomHost = true;
             this.isRoomGuest = false;
             this.isOnlineGame = true;
-
-            // 첫턴 결정 로직
-            let startingPlayer = 'cho'; // 기본값
-            if (this.lastGameLoser) {
-                // 마지막 게임의 패배자가 첫턴을 갖도록 설정
-                startingPlayer = this.lastGameLoser;
-                console.log('- Last game loser:', this.lastGameLoser);
-                console.log('- Starting turn (loser first):', startingPlayer);
-            } else {
-                console.log('- Starting turn (default):', 'cho');
-            }
-
+            
             const roomData = {
                 hostId: this.playerId,
                 hostName: hostName,
                 guestId: null,
                 guestName: null,
                 gameStarted: false,
-                currentPlayer: startingPlayer,
+                currentPlayer: 'cho',
                 board: this.getInitialBoard(),
                 capturedPieces: { cho: [], han: [] },
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
@@ -153,20 +143,9 @@
             return;
         }
         try {
-            // 첫턴 결정 로직
-            let startingPlayer = 'cho'; // 기본값
-            if (this.lastGameLoser) {
-                // 마지막 게임의 패배자가 첫턴을 갖도록 설정
-                startingPlayer = this.lastGameLoser;
-                console.log('- Last game loser for restart:', this.lastGameLoser);
-                console.log('- Starting turn on restart (loser first):', startingPlayer);
-            } else {
-                console.log('- Starting turn on restart (default):', 'cho');
-            }
-
             await this.gameRef.update({
                 board: this.getInitialBoard(),
-                currentPlayer: startingPlayer,
+                currentPlayer: 'cho',
                 capturedPieces: { cho: [], han: [] },
                 gameStarted: true,
                 isGameInProgress: true,
@@ -580,21 +559,6 @@
     }
     
     endGame(winner) {
-        // 승패 정보 저장
-        this.lastGameWinner = winner;
-        this.lastGameLoser = winner === 'cho' ? 'han' : 'cho';
-
-        // Firebase에 승패 정보 저장 (온라인 게임일 경우)
-        if (this.gameRef && this.isOnlineGame) {
-            this.gameRef.update({
-                lastGameWinner: this.lastGameWinner,
-                lastGameLoser: this.lastGameLoser,
-                lastActivity: firebase.database.ServerValue.TIMESTAMP
-            }).catch(error => {
-                console.error('승패 정보 저장 실패:', error);
-            });
-        }
-
         this.isGameInProgress = false;
         this.gameStarted = false;
         this.stopTurnTimer();
@@ -728,16 +692,6 @@
             }
             this.updatePlayerNames();
 
-            // 승패 정보 동기화
-            if (gameData.lastGameWinner !== undefined) {
-                this.lastGameWinner = gameData.lastGameWinner;
-                this.lastGameLoser = gameData.lastGameLoser;
-                console.log('🔄 승패 정보 동기화:', {
-                    winner: this.lastGameWinner,
-                    loser: this.lastGameLoser
-                });
-            }
-
             if (gameData.board) this.syncBoard(gameData.board);
 
             if (gameData.capturedPieces) {
@@ -759,7 +713,7 @@
             if (gameData.gameStarted && !this.isGameInProgress) {
                 this.handleGameStart();
             }
-            if (gameData.gameEnded && this.isGameInProgress && gameData.winner) {
+            if (gameData.gameEnded && this.isGameInProgress) {
                 this.endGame(gameData.winner);
             }
             if (gameData.gameRestarted && gameData.gameStarted && !gameData.gameEnded) {
