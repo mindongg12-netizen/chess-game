@@ -25,6 +25,10 @@ class ChessGame {
         this.hostPlayerName = '';
         this.guestPlayerName = '';
 
+        // 승패 정보 저장
+        this.lastGameWinner = null; // 마지막 게임 승자 저장
+        this.lastGameLoser = null;  // 마지막 게임 패자 저장
+
         // Firebase real-time communication
         this.database = null; // Set after Firebase loads
         this.playerId = this.generatePlayerId();
@@ -111,14 +115,25 @@ class ChessGame {
             console.log('- Is Host:', this.isRoomHost);
             console.log('- Is Guest:', this.isRoomGuest);
             console.log('- My color: white (Host)');
-            console.log('- Starting turn:', 'white');
+
+            // 첫턴 결정 로직
+            let startingPlayer = 'white'; // 기본값
+            if (this.lastGameLoser) {
+                // 마지막 게임의 패배자가 첫턴을 갖도록 설정
+                startingPlayer = this.lastGameLoser;
+                console.log('- Last game loser:', this.lastGameLoser);
+                console.log('- Starting turn (loser first):', startingPlayer);
+            } else {
+                console.log('- Starting turn (default):', 'white');
+            }
+
             const roomData = {
                 hostId: this.playerId,
                 hostName: hostName,
                 guestId: null,
                 guestName: null,
                 gameStarted: false,
-                currentPlayer: 'white',
+                currentPlayer: startingPlayer,
                 board: this.getInitialBoard(),
                 capturedPieces: { white: [], black: [] },
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
@@ -148,10 +163,21 @@ class ChessGame {
         }
         console.log('🔄 Requesting online game restart');
         try {
+            // 첫턴 결정 로직
+            let startingPlayer = 'white'; // 기본값
+            if (this.lastGameLoser) {
+                // 마지막 게임의 패배자가 첫턴을 갖도록 설정
+                startingPlayer = this.lastGameLoser;
+                console.log('- Last game loser for restart:', this.lastGameLoser);
+                console.log('- Starting turn on restart (loser first):', startingPlayer);
+            } else {
+                console.log('- Starting turn on restart (default):', 'white');
+            }
+
             const initialBoard = this.getInitialBoard();
             await this.gameRef.update({
                 board: initialBoard,
-                currentPlayer: 'white',
+                currentPlayer: startingPlayer,
                 capturedPieces: { white: [], black: [] },
                 gameStarted: true,
                 isGameInProgress: true,
@@ -431,7 +457,22 @@ class ChessGame {
 
     endGame(winner) {
         console.log(`🎯 게임 종료: ${winner} 승리!`);
-        
+
+        // 승패 정보 저장
+        this.lastGameWinner = winner;
+        this.lastGameLoser = winner === 'white' ? 'black' : 'white';
+
+        // Firebase에 승패 정보 저장 (온라인 게임일 경우)
+        if (this.gameRef && this.isOnlineGame) {
+            this.gameRef.update({
+                lastGameWinner: this.lastGameWinner,
+                lastGameLoser: this.lastGameLoser,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
+            }).catch(error => {
+                console.error('승패 정보 저장 실패:', error);
+            });
+        }
+
         // 게임 상태 업데이트
         this.isGameInProgress = false;
         this.gameStarted = false;
@@ -619,6 +660,16 @@ class ChessGame {
                 }
             }
             this.updatePlayerNames();
+
+            // 승패 정보 동기화
+            if (gameData.lastGameWinner !== undefined) {
+                this.lastGameWinner = gameData.lastGameWinner;
+                this.lastGameLoser = gameData.lastGameLoser;
+                console.log('🔄 승패 정보 동기화:', {
+                    winner: this.lastGameWinner,
+                    loser: this.lastGameLoser
+                });
+            }
 
             // Sync board state
             if (gameData.board) this.syncBoard(gameData.board);
