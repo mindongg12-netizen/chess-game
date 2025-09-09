@@ -37,6 +37,10 @@ class ChessGame {
         // 마지막 승리자 정보 (게임 재시작 시 첫 턴 결정용)
         this.lastWinner = null;
 
+        // 각 플레이어의 실제 색상 (게임 재시작 시 변경될 수 있음)
+        this.myColor = null; // 현재 플레이어의 색상
+        this.opponentColor = null; // 상대방의 색상
+
         // Unicode chess pieces
         this.pieces = {
             white: {
@@ -113,7 +117,12 @@ class ChessGame {
             console.log('🏠 Firebase Host setup complete');
             console.log('- Is Host:', this.isRoomHost);
             console.log('- Is Guest:', this.isRoomGuest);
-            console.log('- My color: white (Host)');
+
+            // 호스트의 색상 설정 (첫 게임에서는 항상 white)
+            this.myColor = 'white';
+            this.opponentColor = 'black';
+
+            console.log('- My color:', this.myColor);
             console.log('- Starting turn:', 'white');
             const roomData = {
                 hostId: this.playerId,
@@ -154,6 +163,25 @@ class ChessGame {
         // 마지막 승리자의 반대 색상으로 첫 턴 시작 (승리자가 없었다면 white부터 시작)
         const firstPlayer = this.lastWinner ? (this.lastWinner === 'white' ? 'black' : 'white') : 'white';
 
+        // 게임 재시작 시 색상 재할당
+        let hostColor, guestColor;
+        if (firstPlayer === 'white') {
+            hostColor = 'white';
+            guestColor = 'black';
+        } else {
+            hostColor = 'black';
+            guestColor = 'white';
+        }
+
+        // 내 색상도 업데이트
+        if (this.isRoomHost) {
+            this.myColor = hostColor;
+            this.opponentColor = guestColor;
+        } else {
+            this.myColor = guestColor;
+            this.opponentColor = hostColor;
+        }
+
         try {
             const initialBoard = this.getInitialBoard();
             await this.gameRef.update({
@@ -164,6 +192,8 @@ class ChessGame {
                 isGameInProgress: true,
                 gameEnded: false,
                 winner: null,
+                hostColor: hostColor,
+                guestColor: guestColor,
                 gameRestarted: firebase.database.ServerValue.TIMESTAMP,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
@@ -181,7 +211,12 @@ class ChessGame {
         const firstPlayer = this.lastWinner ? (this.lastWinner === 'white' ? 'black' : 'white') : 'white';
         this.currentPlayer = firstPlayer;
 
+        // 로컬 게임에서는 첫 번째 플레이어의 색상을 내 색상으로 설정
+        this.myColor = firstPlayer;
+        this.opponentColor = firstPlayer === 'white' ? 'black' : 'white';
+
         console.log(`🔄 로컬 게임 재시작 - 첫 번째 플레이어: ${firstPlayer} (이전 승리자: ${this.lastWinner || '없음'})`);
+        console.log(`🎨 내 색상: ${this.myColor}, 상대방 색상: ${this.opponentColor}`);
 
         this.selectedSquare = null;
         this.capturedPieces = { white: [], black: [] };
@@ -282,9 +317,14 @@ class ChessGame {
         console.log(`🖱️ Clicked on: (${row},${col})`);
         
         // *** FIX: Stricter turn checking at the very beginning.
-        const myColor = this.isRoomHost ? 'white' : 'black';
-        if (this.currentPlayer !== myColor) {
-            console.warn(`❌ Not your turn! Current turn: ${this.currentPlayer}, Your color: ${myColor}`);
+        if (!this.myColor) {
+            console.warn('❌ My color not set yet!');
+            alert("Game not properly initialized. Please restart.");
+            return;
+        }
+
+        if (this.currentPlayer !== this.myColor) {
+            console.warn(`❌ Not your turn! Current turn: ${this.currentPlayer}, Your color: ${this.myColor}`);
             alert("It's the opponent's turn. Please wait.");
             return;
         }
@@ -655,6 +695,18 @@ class ChessGame {
                 this.updateGameStatus();
                 this.resetTurnTimer();
             }
+
+            // Sync player colors
+            if (gameData.hostColor && gameData.guestColor) {
+                if (this.isRoomHost) {
+                    this.myColor = gameData.hostColor;
+                    this.opponentColor = gameData.guestColor;
+                } else {
+                    this.myColor = gameData.guestColor;
+                    this.opponentColor = gameData.hostColor;
+                }
+                console.log(`🎨 Color sync - My color: ${this.myColor}, Opponent color: ${this.opponentColor}`);
+            }
             // *** FIX: Unlock the board after any state update that changes the turn
             this.isMovePending = false;
             console.log('🔓 Board unlocked after state sync.');
@@ -716,6 +768,18 @@ class ChessGame {
         this.isGameInProgress = true;
         this.currentPlayer = 'white';
         this.isMovePending = false; // Reset lock on game start
+
+        // 게임 시작 시 색상 설정 (첫 게임에서는 호스트=흰색, 게스트=검은색)
+        if (this.isRoomHost) {
+            this.myColor = 'white';
+            this.opponentColor = 'black';
+        } else {
+            this.myColor = 'black';
+            this.opponentColor = 'white';
+        }
+
+        console.log(`🎨 Game start - My color: ${this.myColor}, Opponent color: ${this.opponentColor}`);
+
         this.showGameButtons();
         this.updateGameStatus();
         this.startTurnTimer();
@@ -732,7 +796,29 @@ class ChessGame {
         const firstPlayer = this.lastWinner ? (this.lastWinner === 'white' ? 'black' : 'white') : 'white';
         this.currentPlayer = firstPlayer;
 
+        // 게임 재시작 시 색상 재할당
+        if (firstPlayer === 'white') {
+            // 흰색이 첫 턴이면 호스트=흰색, 게스트=검은색
+            if (this.isRoomHost) {
+                this.myColor = 'white';
+                this.opponentColor = 'black';
+            } else {
+                this.myColor = 'black';
+                this.opponentColor = 'white';
+            }
+        } else {
+            // 검은색이 첫 턴이면 호스트=검은색, 게스트=흰색
+            if (this.isRoomHost) {
+                this.myColor = 'black';
+                this.opponentColor = 'white';
+            } else {
+                this.myColor = 'white';
+                this.opponentColor = 'black';
+            }
+        }
+
         console.log(`🎯 게임 재시작 - 첫 번째 플레이어: ${firstPlayer} (이전 승리자: ${this.lastWinner || '없음'})`);
+        console.log(`🎨 내 색상: ${this.myColor}, 상대방 색상: ${this.opponentColor}`);
 
         this.selectedSquare = null;
         this.currentTurnTime = this.turnTimeLimit;
@@ -993,6 +1079,10 @@ class ChessGame {
             this.isRoomHost = false;
             this.isRoomGuest = true;
             this.isOnlineGame = true;
+
+            // 게스트의 색상 설정 (첫 게임에서는 항상 black)
+            this.myColor = 'black';
+            this.opponentColor = 'white';
             
             console.log('✅ Joined Firebase room successfully');
             
