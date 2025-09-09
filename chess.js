@@ -34,6 +34,9 @@ class ChessGame {
         // 다크모드 상태
         this.isDarkMode = localStorage.getItem('darkMode') === 'true';
 
+        // 마지막 승리자 정보 (게임 재시작 시 첫 턴 결정용)
+        this.lastWinner = null;
+
         // Unicode chess pieces
         this.pieces = {
             white: {
@@ -147,11 +150,15 @@ class ChessGame {
             return;
         }
         console.log('🔄 Requesting online game restart');
+
+        // 마지막 승리자의 반대 색상으로 첫 턴 시작 (승리자가 없었다면 white부터 시작)
+        const firstPlayer = this.lastWinner ? (this.lastWinner === 'white' ? 'black' : 'white') : 'white';
+
         try {
             const initialBoard = this.getInitialBoard();
             await this.gameRef.update({
                 board: initialBoard,
-                currentPlayer: 'white',
+                currentPlayer: firstPlayer,
                 capturedPieces: { white: [], black: [] },
                 gameStarted: true,
                 isGameInProgress: true,
@@ -160,7 +167,7 @@ class ChessGame {
                 gameRestarted: firebase.database.ServerValue.TIMESTAMP,
                 lastActivity: firebase.database.ServerValue.TIMESTAMP
             });
-            console.log('✅ Game restart signal sent to Firebase');
+            console.log(`✅ Game restart signal sent to Firebase - First player: ${firstPlayer}`);
         } catch (error) {
             console.error('❌ Game restart failed:', error);
             alert('Failed to restart game: ' + error.message);
@@ -169,7 +176,13 @@ class ChessGame {
 
     resetGame() {
         this.stopTurnTimer();
-        this.currentPlayer = 'white';
+
+        // 마지막 승리자의 반대 색상으로 첫 턴 시작 (승리자가 없었다면 white부터 시작)
+        const firstPlayer = this.lastWinner ? (this.lastWinner === 'white' ? 'black' : 'white') : 'white';
+        this.currentPlayer = firstPlayer;
+
+        console.log(`🔄 로컬 게임 재시작 - 첫 번째 플레이어: ${firstPlayer} (이전 승리자: ${this.lastWinner || '없음'})`);
+
         this.selectedSquare = null;
         this.capturedPieces = { white: [], black: [] };
         this.currentTurnTime = this.turnTimeLimit;
@@ -431,7 +444,10 @@ class ChessGame {
 
     endGame(winner) {
         console.log(`🎯 게임 종료: ${winner} 승리!`);
-        
+
+        // 마지막 승리자 정보 저장 (게임 재시작 시 첫 턴 결정용)
+        this.lastWinner = winner;
+
         // 게임 상태 업데이트
         this.isGameInProgress = false;
         this.gameStarted = false;
@@ -707,11 +723,17 @@ class ChessGame {
     
     handleGameRestart(gameData) {
         console.log('🔄 게임 재시작 처리:', gameData);
-        
+
         // 게임 상태 초기화
         this.gameStarted = true;
         this.isGameInProgress = true;
-        this.currentPlayer = 'white';
+
+        // 마지막 승리자의 반대 색상으로 첫 턴 시작 (승리자가 없었다면 white부터 시작)
+        const firstPlayer = this.lastWinner ? (this.lastWinner === 'white' ? 'black' : 'white') : 'white';
+        this.currentPlayer = firstPlayer;
+
+        console.log(`🎯 게임 재시작 - 첫 번째 플레이어: ${firstPlayer} (이전 승리자: ${this.lastWinner || '없음'})`);
+
         this.selectedSquare = null;
         this.currentTurnTime = this.turnTimeLimit;
         this.isMovePending = false; // 게임 재시작 시 이동 플래그 초기화
